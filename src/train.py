@@ -1,3 +1,5 @@
+import json
+import os
 import uuid
 
 import numpy as np
@@ -5,9 +7,13 @@ import wandb
 from transformers import AutoModelForTokenClassification, Trainer
 from transformers import DataCollatorForTokenClassification
 from src.callback import CustomLossTrainer
-from .metrics import compute_metrics, metric
+from .metrics import compute_metrics, metric, find_class_pos
 from .tokenizer import HFTokenizer
 from .callback import LossCallback
+from .util import NpEncoder
+
+BASE_PATH = os.path.join(os.path.expanduser('~'), ".pads-nlp")
+MODELS_DIR = os.path.join(BASE_PATH, 'models', 'token_bias')
 
 
 def train(dataset, training_args, saving_folder, model="bert-base-uncased"):
@@ -44,21 +50,32 @@ def train(dataset, training_args, saving_folder, model="bert-base-uncased"):
 
     # Predictions on test dataset and evaluation
 
-    predictions, labels, _ = trainer.predict(tokenized_datasets["test"])
+    predictions, labels_, _ = trainer.predict(tokenized_datasets["test"])
     predictions = np.argmax(predictions, axis=2)
 
     # Remove ignored index (special tokens)
     true_predictions = [
-        [dataset.labels[p] for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
+        [labels[p] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels_)
     ]
 
     true_labels = [
-        [dataset.labels[l] for (p, l) in zip(prediction, label) if l != -100]
-        for prediction, label in zip(predictions, labels)
+        [labels[l] for (p, l) in zip(prediction, label) if l != -100]
+        for prediction, label in zip(predictions, labels_)
     ]
 
     results = metric.compute(predictions=true_predictions, references=true_labels)
+    nb_classes = int((len(labels) - 1) / 2)
+    classes = list(results.keys())[:nb_classes]
+
+    for l in classes:
+        positions = []
+        for sample in true_labels:
+            positions += find_class_pos(sample, l)
+        results[l].update({"positions": positions})
+
+    with open(os.path.join(MODELS_DIR, 'results', f'test_{uuid.uuid1()}.json'), 'w') as f:
+        json.dump(results, f, cls=NpEncoder)
     test_results = {}
     for k, v in results.items():
         if isinstance(v, dict):

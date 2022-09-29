@@ -24,17 +24,17 @@ parser.add_argument('-model', type=str, default='bert-base-uncased',
 # Optional
 parser.add_argument('-run', type=str, default='conll2003',
                     help='Name of the run')
-parser.add_argument('-nbruns', default=10, type=int, help='Number of epochs during training')
+parser.add_argument('-nbruns', default=1, type=int, help='Number of epochs during training')
 parser.add_argument('-shuffled', action='store_true', help='If set, training will be done on shuffled data')
 parser.add_argument('-splitseed', default=42, type=int, help='Seed for reproducibility when sampling dataset. '
                                                              'Default is 42 (set None for randomness).')
 parser.add_argument('-notrain', action='store_true', help='If set, training will be skipped')
 parser.add_argument('-noeval', action='store_true', help='If set, evaluation phase will be skipped')
 parser.add_argument('-plot', action='store_true', help='If set, charts will be plotted')
-parser.add_argument('-maxseqlen', default=None, type=int,
+parser.add_argument('-maxseqlen', default=512, type=int,
                     help='Value used by tokenizer to apply padding or truncation to sequences. Default is '
                          'max_value=512')
-parser.add_argument('-epochs', default=2, type=int, help='Number of epochs during training')
+parser.add_argument('-epochs', default=1, type=int, help='Number of epochs during training')
 parser.add_argument('-warmsteps', default=500, type=int, help='Number of warm-up steps before training')
 parser.add_argument('-lr', default=2e-5, type=float, help='Learning rate to use during training')
 parser.add_argument('-wdecay', default=0.01, type=float, help='Weight decay to use during training')
@@ -46,16 +46,16 @@ parser.add_argument('-evalstrategy', default='steps', type=str, help='Strategy f
 
 if __name__ == "__main__":
     cmd_args = parser.parse_args()
-    # os.environ['WANDB_PROJECT'] = PROJECT
-    # os.environ['WANDB_LOG_MODEL'] = "true"
+    os.environ['WANDB_PROJECT'] = PROJECT
+    os.environ['WANDB_LOG_MODEL'] = "true"
     # Setting up directories according to the model_name provided in command line
     model_name_or_path = cmd_args.model
     is_a_presaved_model = len(model_name_or_path.split('_')) > 1
     set_seed(cmd_args.splitseed)
     run_name = cmd_args.run + "_" + model_name_or_path
-    # wandb.init(project=PROJECT,
-    #            name=run_name,
-    #            tags=["p-22-ner-position-bias"])
+    wandb.init(project=PROJECT,
+               name=run_name,
+               tags=["p-22-ner-position-bias"])
     model_output_dir = os.path.join(MODELS_DIR, model_name_or_path, run_name)
 
     model_cache_dir = os.path.join('cache', model_name_or_path)
