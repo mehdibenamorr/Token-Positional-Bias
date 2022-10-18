@@ -1,19 +1,16 @@
 from transformers import AutoTokenizer
 
 
-class HFTokenizer(object):
-    NAME = "HFTokenizer"
 
-    def __init__(self, hf_pretrained_tokenizer_checkpoint):
-        self._tokenizer = AutoTokenizer.from_pretrained(hf_pretrained_tokenizer_checkpoint)
+class NERProcessor(object):
+    NAME = "NERProcessor"
+
+    def __init__(self, pretrained_checkpoint, lower_case=True):
+        self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case)
 
     @property
     def tokenizer(self):
         return self._tokenizer
-
-    @staticmethod
-    def init_vf(hf_pretrained_tokenizer_checkpoint):
-        return HFTokenizer(hf_pretrained_tokenizer_checkpoint=hf_pretrained_tokenizer_checkpoint)
 
     def tokenize_and_align_labels(self,
                                   examples,
@@ -44,3 +41,26 @@ class HFTokenizer(object):
 
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
+
+
+if __name__ == '__main__':
+    from dataset.ner_dataset import NERDataset, TruncateDataset
+
+    checkpoint = "bert-base-uncased"
+    conll03 = NERDataset(dataset="conll03")
+
+    ner_processor = NERProcessor(pretrained_checkpoint=checkpoint)
+
+    tokenized_datasets = conll03.dataset.map(ner_processor.tokenize_and_align_labels, batched=True)
+
+    print(conll03)
+
+    print("*" * 100)
+
+    print(tokenized_datasets)
+
+    print("First sample: ", conll03.dataset['train'][0])
+
+    print("*" * 100)
+
+    print("First tokenized sample: ", tokenized_datasets['train'][0])
