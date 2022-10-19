@@ -3,21 +3,14 @@
 
 # file: random_seed.py
 # refer to :
-# issue: https://github.com/PyTorchLightning/pytorch-lightning/issues/1868
-# Please Notice:
-# set for trainer: https://pytorch-lightning.readthedocs.io/en/latest/trainer.html
-#   from pytorch_lightning import Trainer, seed_everything
-#   seed_everything(42)
-#   sets seeds for numpy, torch, python.random and PYTHONHASHSEED.
-#   model = Model()
-#   trainer = Trainer(deterministic=True)
+# issue: https://pytorch.org/docs/stable/notes/randomness.html#reproducibility
+
 
 import random
 import torch
 import numpy as np
-from pytorch_lightning import seed_everything
 import argparse
-from transformers import TrainingArguments, HfArgumentParser
+from transformers import TrainingArguments, HfArgumentParser, set_seed
 
 
 def set_random_seed(seed: int):
@@ -26,7 +19,7 @@ def set_random_seed(seed: int):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    seed_everything(seed=seed)
+    set_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -40,12 +33,24 @@ def get_parser() -> argparse.ArgumentParser:
                         help='Name of a specific model previously saved inside "models" folder'
                              ' or name of an HuggingFace model')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
-    parser.add_argument("--seq_length", type=int, default=512,
+    parser.add_argument("--seq_length", type=str, default="max", choices=["max", "median", "min"],
                         help="The maximum total input sequence length after tokenization. Sequence longer than this "
                              "will be truncated, sequences shorter will be padded.")
+    parser.add_argument("--max_length", type=int, default=None,
+                        help="The maximum total input sequence length to overwrite seq_length by given number. "
+                             "Sequence longer than this "
+                             "will be truncated, sequences shorter will be padded.")
+    parser.add_argument("--truncation", action="store_true",
+                        help="Whether to truncate sequences exceeding max_length")
+    parser.add_argument("--return_truncated_tokens", action="store_true",
+                        help="Whether to return truncated tokens within the encoded batch")
+    parser.add_argument("--padding", type=str, default="right", choices=["right", "left", "random"],
+                        help="The padding strategy to be used. 'random' means pad tokens will be injected within "
+                             "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
-    parser.add_argument('--preprocess', default='None', help='If set, training will be done on shuffled data',
-                        choices=["shuffle", "rand_pad", "left_pad", "right_pad"])
+    parser.add_argument('--shuffle', action='store_true',
+                        help='If set, random sequences in training batches will be shuffled',
+                        )
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '
                              '"relative_key_query". For positional embeddings use "absolute". For more information '

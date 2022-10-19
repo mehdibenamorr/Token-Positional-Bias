@@ -9,6 +9,7 @@ dependencies:
     - nltk==3.7
     - tokenizers==0.12.1
     - transformers==4.22.1
-    - pytorch-lightning==1.7.7
     - wandb==0.13.4
+    - seaborn=0.12.1
+    - seqeval=1.2.2
 

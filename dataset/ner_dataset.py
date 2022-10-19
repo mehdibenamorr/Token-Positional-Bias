@@ -3,8 +3,11 @@
 import datasets
 import os
 from pathlib import Path
+
+import numpy as np
 from datasets import ClassLabel, DownloadConfig
 import datasets
+import matplotlib.pyplot as plt
 
 
 class NERDatasetConfig(datasets.BuilderConfig):
@@ -141,11 +144,12 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                     tokens.append(splits[0])
                     ner_tags.append(splits[1].rstrip())
             # last example
-            yield guid, {
-                "id": str(guid),
-                "tokens": tokens,
-                "ner_tags": ner_tags,
-            }
+            if tokens:
+                yield guid, {
+                    "id": str(guid),
+                    "tokens": tokens,
+                    "ner_tags": ner_tags,
+                }
 
 
 class NERDataset(object):
@@ -162,10 +166,18 @@ class NERDataset(object):
         print("Cache1 directory: ", self._dataset.cache_dir)
         self._dataset.download_and_prepare(download_config=download_config)
         self._dataset = self._dataset.as_dataset()
+        self.max_length = self.seq_length()
 
     @property
     def dataset(self):
         return self._dataset
+
+    def seq_length(self):
+        train = [len(a["tokens"]) for a in self.dataset["train"]]
+        dev = [len(a["tokens"]) for a in self.dataset["validation"]]
+        test = [len(a["tokens"]) for a in self.dataset["test"]]
+        sequence_lengths = train + dev + test
+        return {"max": max(sequence_lengths)+2, "median": int(np.median(sequence_lengths))+2, "min": min(sequence_lengths)+2}
 
     @property
     def labels(self) -> ClassLabel:
@@ -185,8 +197,14 @@ class NERDataset(object):
     def test(self):
         return self._dataset["test"]
 
+    def test_shuffled(self):
+        return self._dataset["shuffled_test"]
+
     def validation(self):
         return self._dataset["validation"]
+
+    def validation_shuffled(self):
+        return self._dataset["shuffled_validation"]
 
 
 from torch.utils.data import Dataset
@@ -220,3 +238,11 @@ if __name__ == '__main__':
     print("List of tags: ", dataset['train'].features['ner_tags'].feature.names)
 
     print("First sample: ", dataset['train'][80])
+
+    lengths = [len(a["tokens"]) for a in dataset["train"]]
+    import matplotlib
+
+    matplotlib.use("TkAgg")
+    plt.hist(lengths)
+    plt.show()
+    print("")

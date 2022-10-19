@@ -19,10 +19,12 @@ import torch
 import torch.nn as nn
 from promise.dataloader import DataLoader
 from metrics.pos_loss import CrossEntropyLossPerPosition
+from metrics.ner_f1 import compute_ner_pos_f1
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
+import wandb
 
-os.environ["WANDB_DISABLED"] = "true"
+os.environ['WANDB_LOG_MODEL'] = "true"
 
 
 class BertForNERTask(Trainer):
@@ -30,18 +32,26 @@ class BertForNERTask(Trainer):
         # Args
         self.model_path = all_args.model
         self.dataset_name = all_args.dataset
-        self.max_length = all_args.max_length
+        self.seq_length = all_args.seq_length
         self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
-        self.preprocess = all_args.preprocess
+        self.shuffle = all_args.shuffle
+        self.all_args = all_args
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
 
         # Dataset
         self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
-        self.processor = NERProcessor(pretrained_checkpoint=self.model_path)
-        self.processed_dataset = self.dataset.dataset.map(self.processor.tokenize_and_align_labels, batched=True)
-        self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer)
+        self.max_length = self.dataset.max_length[self.seq_length]
+        self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
+                                      kwargs=all_args)
+        self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
+                                                               fn_kwargs={"split": "train"}, batched=True)
+        self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
+                                                                   fn_kwargs={"split": "validation"}, batched=True)
+        self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
+                                                             fn_kwargs={"split": "test"}, batched=True)
+        self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer, max_length=self.max_length)
 
         # Model loading
         bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
@@ -51,11 +61,13 @@ class BertForNERTask(Trainer):
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
-        super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=self.processed_dataset["train"],
-                                             eval_dataset=self.processed_dataset["validation"],
+        super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=self.train_dataset,
+                                             eval_dataset=self.eval_dataset,
                                              data_collator=self.collate_fn, tokenizer=self.processor.tokenizer,
+                                             compute_metrics=lambda p: compute_ner_pos_f1(p=p,
+                                                                                          label_list=self.dataset.labels),
                                              **kwargs)
-        self.test_dataset = self.processed_dataset["test"]
+        # self.test_dataset = self.processed_dataset["test"]
         self.loss_pos_fn = CrossEntropyLossPerPosition()
         self.losses = {"train": [], "dev": []}
         self.training = False
@@ -96,16 +108,25 @@ class BertForNERTask(Trainer):
 def main():
     parser = get_parser()
     training_args, args = parser.parse_args_into_dataclasses()
-
+    os.makedirs(training_args.output_dir, exist_ok=True)
+    os.environ["WANDB_DIR"] = training_args.output_dir
+    experiment_name = f"bert-position-bias-{args.dataset}"
+    run_name = f"max_length={args.max_length}/{args.seq_length}-truncate={args.truncation}-padding={args.padding}-" \
+               f"shuffle={args.shuffle}-seed={training_args.seed}"
     for i in range(args.nbruns):
+        wandb.init(project=experiment_name, name=run_name + f"_{i + 1}")
         print(f"Run number:{i + 1}")
         task_trainer = BertForNERTask(all_args=args, training_args=training_args)
         task_trainer.train()
+
+        task_trainer.evaluate()
 
         ## Logging Loss per pos
         losses = task_trainer.losses
 
         task_trainer.test()
+
+        wandb.finish()
 
 
 if __name__ == "__main__":
