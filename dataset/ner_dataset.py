@@ -52,9 +52,11 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
         self._url = URLS[dataset]
         self._train_file = train_file
         self._dev_file = dev_file
+        self._dev_file_shuffled = f"{dev_file}.shuffled"
         self._test_file = test_file
+        self._test_file_shuffled = f"{test_file}.shuffled"
         self.debugging = debugging
-        self.limit = 10
+        self.limit = 100
         super(NERDatasetbuilder, self).__init__(*args, cache_dir=cache_dir, **kwargs)
 
     @classmethod
@@ -99,7 +101,9 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
         urls_to_download = {
             "train": f"{self._url}{self._train_file}",
             "dev": f"{self._url}{self._dev_file}",
+            "dev-shuffled": f"{self._url}{self._dev_file_shuffled}",
             "test": f"{self._url}{self._test_file}",
+            "test-shuffled": f"{self._url}{self._test_file_shuffled}",
         }
         downloaded_files = dl_manager.download_and_extract(urls_to_download)
 
@@ -107,6 +111,10 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": downloaded_files["train"]}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={"filepath": downloaded_files["dev"]}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": downloaded_files["test"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_validation"),
+                                    gen_kwargs={"filepath": downloaded_files["dev-shuffled"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_test"),
+                                    gen_kwargs={"filepath": downloaded_files["test-shuffled"]}),
         ]
 
     def _generate_examples(self, filepath):

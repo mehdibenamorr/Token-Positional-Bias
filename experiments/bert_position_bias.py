@@ -18,11 +18,12 @@ from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
 from promise.dataloader import DataLoader
-from torch.nn import CrossEntropyLoss
+from metrics.pos_loss import CrossEntropyLossPerPosition
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
 
 os.environ["WANDB_DISABLED"] = "true"
+
 
 class BertForNERTask(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, **kwargs):
@@ -30,7 +31,6 @@ class BertForNERTask(Trainer):
         self.model_path = all_args.model
         self.dataset_name = all_args.dataset
         self.max_length = all_args.max_length
-        self.num_labels = all_args.num_labels
         self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
         self.preprocess = all_args.preprocess
@@ -44,7 +44,7 @@ class BertForNERTask(Trainer):
         self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer)
 
         # Model loading
-        bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path, num_label=self.num_labels,
+        bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
                                                                        id2label=self.dataset.id2label,
                                                                        label2id=self.dataset.label2id,
                                                                        position_embedding_type=self.pos_emb_type)
@@ -56,7 +56,7 @@ class BertForNERTask(Trainer):
                                              data_collator=self.collate_fn, tokenizer=self.processor.tokenizer,
                                              **kwargs)
         self.test_dataset = self.processed_dataset["test"]
-        self.loss_fn = CrossEntropyLoss(reduction="none")
+        self.loss_pos_fn = CrossEntropyLossPerPosition()
         self.losses = {"train": [], "dev": []}
         self.training = False
 
@@ -64,11 +64,11 @@ class BertForNERTask(Trainer):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         labels = inputs["labels"]
         logits = outputs["logits"]
-        losses_ = [self.loss_fn(logits[i], labels[i]) for i in range(logits.shape[0])]
+        loss_per_pos = self.loss_pos_fn(logits, labels)
         if self.training:
-            self.losses["train"].append(losses_)
+            self.losses["train"].append(loss_per_pos)
         else:
-            self.losses["dev"].append(losses_)
+            self.losses["dev"].append(loss_per_pos)
         return (loss, outputs) if return_outputs else loss
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
@@ -96,8 +96,6 @@ class BertForNERTask(Trainer):
 def main():
     parser = get_parser()
     training_args, args = parser.parse_args_into_dataclasses()
-
-
 
     for i in range(args.nbruns):
         print(f"Run number:{i + 1}")

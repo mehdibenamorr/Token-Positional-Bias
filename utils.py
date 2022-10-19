@@ -40,17 +40,18 @@ def get_parser() -> argparse.ArgumentParser:
                         help='Name of a specific model previously saved inside "models" folder'
                              ' or name of an HuggingFace model')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
-    parser.add_argument("--max_length", type=int, default=512,
-                        help="The maximum total input sequence length after tokenization. Sequence longer than this will be truncated, sequences shorter will be padded.")
-    parser.add_argument("--num_labels", type=int, default=1,
-                        help="1 denotes using sigmoid for start and end labels. 2 denotes for using argmax.")
-    parser.add_argument("--activate_func", type=str, default="gelu")
+    parser.add_argument("--seq_length", type=int, default=512,
+                        help="The maximum total input sequence length after tokenization. Sequence longer than this "
+                             "will be truncated, sequences shorter will be padded.")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
     parser.add_argument('--preprocess', default='None', help='If set, training will be done on shuffled data',
                         choices=["shuffle", "rand_pad", "left_pad", "right_pad"])
     parser.add_argument('--position_embedding_type', default='absolute',
-                        help=' Type of position embedding. Choose one of "absolute", "relative_key", "relative_key_query". '
-                             'For positional embeddings use "absolute". For more information on "relative_key", please refer to Self-Attention with Relative Position Representations (Shaw et al.). For more information on "relative_key_query", please refer to Method 4 in Improve Transformer Models with Better Relative Position Embeddings (Huang et al.).',
+                        help=' Type of position embedding. Choose one of "absolute", "relative_key", '
+                             '"relative_key_query". For positional embeddings use "absolute". For more information '
+                             'on "relative_key", please refer to Self-Attention with Relative Position Representations'
+                             '(Shaw et al.). For more information on "relative_key_query", please refer to Method 4 in '
+                             'Improve Transformer Models with Better Relative Position Embeddings (Huang et al.).',
                         choices=["absolute", "relative_key", "relative_key_query"])
     parser.add_argument("--debugging", action="store_true", help="whether it's debugging")
 
