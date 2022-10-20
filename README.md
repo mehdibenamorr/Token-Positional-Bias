@@ -22,7 +22,7 @@ conda env create -f p-22-ner-position-bias.yml
 ```
 
 ## Bert Positional Bias in Named Entity Recognition
-In this repository, we analyze BERT performance on two datasets [conll03]() and [Ontonotesv5](). Processed files for both datasets can be downloaded from [here](https://share.pads.fim.uni-passau.de/datasets/nlp/datasets.zip).
+In this repository, we analyze BERT performance on two datasets [conll03]() and [Ontonotesv5](). Processed files for both datasets can be downloaded from this link [https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing](https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing).
 
 ### Experiments:
 
