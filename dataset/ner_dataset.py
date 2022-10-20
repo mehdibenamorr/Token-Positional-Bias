@@ -43,9 +43,9 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                  *args,
                  cache_dir,
                  dataset="conll03",
-                 train_file="train.word.bmes",
-                 dev_file="dev.word.bmes",
-                 test_file="test.word.bmes",
+                 train_file="train.word.iobes",
+                 dev_file="dev.word.iobes",
+                 test_file="test.word.iobes",
                  debugging=False,
                  **kwargs):
         self._ner_tags = self.get_labels(dataset)
@@ -66,18 +66,18 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
     def get_labels(cls, dataset):
         """gets the list of labels for this data set."""
         if dataset == "ontonotes5":
-            return ['O', 'S-PERSON', 'B-PERSON', 'M-PERSON', 'E-PERSON', 'S-GPE', 'B-GPE', 'M-GPE', 'E-GPE',
-                    'S-ORDINAL', 'B-ORDINAL', 'M-ORDINAL', 'E-ORDINAL', 'S-NORP', 'B-NORP', 'M-NORP', 'E-NORP',
-                    'S-CARDINAL', 'B-CARDINAL', 'M-CARDINAL', 'E-CARDINAL', 'S-ORG', 'B-ORG', 'M-ORG', 'E-ORG',
-                    'S-DATE', 'B-DATE', 'M-DATE', 'E-DATE', 'S-LOC', 'B-LOC', 'M-LOC', 'E-LOC', 'S-EVENT', 'B-EVENT',
-                    'M-EVENT', 'E-EVENT', 'S-TIME', 'B-TIME', 'M-TIME', 'E-TIME', 'S-PRODUCT', 'B-PRODUCT', 'M-PRODUCT',
-                    'E-PRODUCT', 'S-LANGUAGE', 'B-LANGUAGE', 'E-LANGUAGE', 'M-LANGUAGE', 'S-WORK_OF_ART',
-                    'B-WORK_OF_ART', 'M-WORK_OF_ART', 'E-WORK_OF_ART', 'S-FAC', 'B-FAC', 'M-FAC', 'E-FAC', 'S-MONEY',
-                    'B-MONEY', 'M-MONEY', 'E-MONEY', 'S-QUANTITY', 'B-QUANTITY', 'M-QUANTITY', 'E-QUANTITY', 'S-LAW',
-                    'B-LAW', 'M-LAW', 'E-LAW', 'S-PERCENT', 'B-PERCENT', 'M-PERCENT', 'E-PERCENT']
+            return ['O', 'S-PERSON', 'B-PERSON', 'I-PERSON', 'E-PERSON', 'S-GPE', 'B-GPE', 'I-GPE', 'E-GPE',
+                    'S-ORDINAL', 'B-ORDINAL', 'I-ORDINAL', 'E-ORDINAL', 'S-NORP', 'B-NORP', 'I-NORP', 'E-NORP',
+                    'S-CARDINAL', 'B-CARDINAL', 'I-CARDINAL', 'E-CARDINAL', 'S-ORG', 'B-ORG', 'I-ORG', 'E-ORG',
+                    'S-DATE', 'B-DATE', 'I-DATE', 'E-DATE', 'S-LOC', 'B-LOC', 'I-LOC', 'E-LOC', 'S-EVENT', 'B-EVENT',
+                    'I-EVENT', 'E-EVENT', 'S-TIME', 'B-TIME', 'I-TIME', 'E-TIME', 'S-PRODUCT', 'B-PRODUCT', 'I-PRODUCT',
+                    'E-PRODUCT', 'S-LANGUAGE', 'B-LANGUAGE', 'E-LANGUAGE', 'I-LANGUAGE', 'S-WORK_OF_ART',
+                    'B-WORK_OF_ART', 'I-WORK_OF_ART', 'E-WORK_OF_ART', 'S-FAC', 'B-FAC', 'I-FAC', 'E-FAC', 'S-MONEY',
+                    'B-MONEY', 'I-MONEY', 'E-MONEY', 'S-QUANTITY', 'B-QUANTITY', 'I-QUANTITY', 'E-QUANTITY', 'S-LAW',
+                    'B-LAW', 'I-LAW', 'E-LAW', 'S-PERCENT', 'B-PERCENT', 'I-PERCENT', 'E-PERCENT']
         elif dataset == "conll03":
-            return ["O", "S-MISC", "B-MISC", "M-MISC", "E-MISC", "S-ORG", "B-ORG", "M-ORG", "E-ORG", "S-LOC", "B-LOC",
-                    "M-LOC", "E-LOC", "S-PER", "B-PER", "M-PER", "E-PER"]
+            return ["O", "S-MISC", "B-MISC", "I-MISC", "E-MISC", "S-ORG", "B-ORG", "I-ORG", "E-ORG", "S-LOC", "B-LOC",
+                    "I-LOC", "E-LOC", "S-PER", "B-PER", "I-PER", "E-PER"]
         return ["0", "1"]
 
     def _info(self):

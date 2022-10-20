@@ -6,9 +6,11 @@ class NERProcessor(object):
 
     def __init__(self, pretrained_checkpoint, max_length=None, lower_case=True, kwargs=None):
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case)
-        self.truncation_strategy = kwargs.truncation if kwargs else "do_not_truncate"
+        self.truncation_strategy = kwargs.truncation if kwargs else False
         self.return_truncated_tokens = kwargs.return_truncated_tokens if kwargs else False
         self.max_length = max_length
+        if self.truncation_strategy and self.max_length:
+            self.return_truncated_tokens = True
 
     @property
     def tokenizer(self):

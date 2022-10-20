@@ -11,7 +11,7 @@ def tags_to_spans(tokens, tags):
     """
     Desc:
         get from token_level labels to list of entities,
-        it doesnot matter tagging scheme is BMES or BIO or BIOUS
+        it doesnot matter tagging scheme is BMES or BIO or IOBES
     Returns:
         a list of entities
         [[token1],[token2,token3],...],
@@ -122,8 +122,8 @@ if __name__ == "__main__":
 
     ### Dev dataset
     print(args.data_dir)
-    dev_path = os.path.join(args.data_dir, args.dataset, "dev.word.bmes")
+    dev_path = os.path.join(args.data_dir, args.dataset, "dev.word.iobes")
     process_data(dev_path, ratio=0.5)
     ### Test dataset
-    test_path = os.path.join(args.data_dir, args.dataset, "test.word.bmes")
+    test_path = os.path.join(args.data_dir, args.dataset, "test.word.iobes")
     process_data(test_path, ratio=1)

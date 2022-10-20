@@ -25,7 +25,7 @@ def compute_ner_f1(p, label_list):
 def find_class_pos(labels, class_label):
     inds = []
     for i in range(len(labels)):
-        if labels[i] in [f"B-{class_label}",f"M-{class_label}",f"E-{class_label}",f"S-{class_label}"]:
+        if labels[i] in [f"B-{class_label}",f"I-{class_label}",f"E-{class_label}",f"S-{class_label}"]:
             inds += i,
     return inds
 

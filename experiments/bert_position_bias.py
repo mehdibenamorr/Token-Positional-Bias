@@ -18,7 +18,7 @@ from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
 from promise.dataloader import DataLoader
-from metrics.pos_loss import CrossEntropyLossPerPosition
+from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
 from metrics.ner_f1 import compute_ner_pos_f1
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
@@ -42,7 +42,7 @@ class BertForNERTask(Trainer):
 
         # Dataset
         self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
-        self.max_length = self.dataset.max_length[self.seq_length]
+        self.max_length = self.dataset.max_length[self.seq_length] if all_args.max_length is None else all_args.max_length
         self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
                                       kwargs=all_args)
         self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
@@ -123,7 +123,18 @@ def main():
 
         ## Logging Loss per pos
         losses = task_trainer.losses
-
+        train_losses = padded_stack(losses["train"])
+        dev_losses = padded_stack(losses["dev"])
+        # data_dict = {'predictions: pd.Series([1,2,3,4])}
+        # table = wandb.Table(dataframe=pd.DataFrame(data_dict))
+        # run.log({'results': table})
+        # - - later
+        # api = wandb.Api()
+        # run = api.run("run_id")
+        # artifact = run.logged_artifacts()[0]
+        # table = artifact.get("results")
+        # dict_table = {column: table.get_column(column) for column in table.columns}
+        # df = pd.DataFrame(dict_table)
         task_trainer.test()
 
         wandb.finish()
