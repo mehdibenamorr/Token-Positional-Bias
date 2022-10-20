@@ -27,7 +27,7 @@ from pathlib import Path
 import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
-
+os.environ['WANDB_DISABLED'] = "true"
 
 class BertForNERTask(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, **kwargs):

@@ -6,7 +6,7 @@ SEED=23456
 TRAIN_BATCH_SIZE=5
 EVAL_BATCH_SIZE=12
 #MAX_LENGTH=128
-SEQ_LENTGH=$2
+SEQ_LENTGH=max
 OPTIMIZER=adamw_hf
 LR_SCHEDULE=linear
 LR=5e-5
@@ -17,6 +17,7 @@ MODEL=bert-base-uncased
 DATASET=$1
 NBRUNS=5
 PADDING=max_length
+PADDING_SIDE=$2
 
 
 OUTPUT_DIR=/data/.position_bias
@@ -39,5 +40,6 @@ python ${REPO}/experiments/bert_position_bias.py \
 --learning_rate ${LR} \
 --lr_scheduler_type ${LR_SCHEDULE} \
 --num_train_epochs ${MAX_EPOCH} \
+--shuffle \
 --truncation
 
