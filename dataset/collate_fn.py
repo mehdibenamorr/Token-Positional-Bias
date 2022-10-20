@@ -59,7 +59,6 @@ class DataCollator(DataCollatorMixin):
 
         if labels is None:
             return batch
-
         sequence_length = torch.tensor(batch["input_ids"]).shape[1]
         padding_side = self.tokenizer.padding_side
         if padding_side == "right":

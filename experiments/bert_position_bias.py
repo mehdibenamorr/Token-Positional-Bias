@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # file: train.py
 #
+import pandas as pd
+
 from utils import set_random_seed
 
 set_random_seed(23456)
@@ -42,16 +44,25 @@ class BertForNERTask(Trainer):
 
         # Dataset
         self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
-        self.max_length = self.dataset.max_length[self.seq_length] if all_args.max_length is None else all_args.max_length
+        self.max_length = self.dataset.max_length[
+            self.seq_length] if all_args.max_length is None else all_args.max_length
         self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
                                       kwargs=all_args)
         self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
                                                                fn_kwargs={"split": "train"}, batched=True)
         self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
                                                                    fn_kwargs={"split": "validation"}, batched=True)
+        self.eval_dataset = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,
+                                                                            fn_kwargs={"split": "shuffled_validation"},
+                                                                            batched=True)
+
         self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
                                                              fn_kwargs={"split": "test"}, batched=True)
-        self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer, max_length=self.max_length)
+        self.shuffled_test = self.dataset.dataset["shuffled_test"].map(self.processor.tokenize_and_align_labels,
+                                                                       fn_kwargs={"split": "shuffled_test"},
+                                                                       batched=True)
+        self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer, max_length=self.max_length,
+                                       padding=self.all_args.padding)
 
         # Model loading
         bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
@@ -102,7 +113,21 @@ class BertForNERTask(Trainer):
                                        metric_key_prefix=metric_key_prefix)
 
     def test(self):
+        super().evaluate(eval_dataset=self.shuffled_test, metric_key_prefix="test_shuffle")
         return super().evaluate(eval_dataset=self.test_dataset, metric_key_prefix="test")
+
+    def log_pos_losses(self):
+        ## Logging Loss per pos
+        train_losses = padded_stack(self.losses["train"]).view(-1,
+                                                               self.max_length).detach().cpu().numpy()
+        dev_losses = padded_stack(self.losses["dev"]).view(-1,
+                                                           self.max_length).detach().cpu().numpy()
+        train_ = pd.DataFrame({f"pos_{k}": train_losses[:,k].tolist() for k in range(train_losses.shape[1])})
+        table = wandb.Table(dataframe=train_)
+        wandb.log({"train_loss/pos": table})
+        eval_ = pd.DataFrame({f"pos_{k}": dev_losses[:, k].tolist() for k in range(dev_losses.shape[1])})
+        table = wandb.Table(dataframe=eval_)
+        wandb.log({"eval_loss/pos": table})
 
 
 def main():
@@ -121,20 +146,8 @@ def main():
 
         task_trainer.evaluate()
 
-        ## Logging Loss per pos
-        losses = task_trainer.losses
-        train_losses = padded_stack(losses["train"])
-        dev_losses = padded_stack(losses["dev"])
-        # data_dict = {'predictions: pd.Series([1,2,3,4])}
-        # table = wandb.Table(dataframe=pd.DataFrame(data_dict))
-        # run.log({'results': table})
-        # - - later
-        # api = wandb.Api()
-        # run = api.run("run_id")
-        # artifact = run.logged_artifacts()[0]
-        # table = artifact.get("results")
-        # dict_table = {column: table.get_column(column) for column in table.columns}
-        # df = pd.DataFrame(dict_table)
+        task_trainer.log_pos_losses()
+
         task_trainer.test()
 
         wandb.finish()

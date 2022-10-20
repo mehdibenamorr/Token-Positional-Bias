@@ -44,7 +44,10 @@ def get_parser() -> argparse.ArgumentParser:
                         help="Whether to truncate sequences exceeding max_length")
     parser.add_argument("--return_truncated_tokens", action="store_true",
                         help="Whether to return truncated tokens within the encoded batch")
-    parser.add_argument("--padding", type=str, default="right", choices=["right", "left", "random"],
+    parser.add_argument("--padding_side", type=str, default="right", choices=["right", "left", "random"],
+                        help="The padding strategy to be used. 'random' means pad tokens will be injected within "
+                             "original sequence in random positions")
+    parser.add_argument("--padding", type=str, default="longest", choices=["max_length", "longest", "do_not_pad"],
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')

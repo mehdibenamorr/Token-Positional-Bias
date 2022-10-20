@@ -6,9 +6,13 @@ class NERProcessor(object):
 
     def __init__(self, pretrained_checkpoint, max_length=None, lower_case=True, kwargs=None):
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case)
-        self.truncation_strategy = kwargs.truncation if kwargs else False
+        self.padding, self.truncation_strategy, self.max_length, _ = self.tokenizer._get_padding_truncation_strategies(
+            padding=kwargs.padding, truncation=kwargs.truncation,
+            max_length=max_length)
+        # self.truncation_strategy = kwargs.truncation if kwargs else False
         self.return_truncated_tokens = kwargs.return_truncated_tokens if kwargs else False
-        self.max_length = max_length
+        # self.padding = kwargs.padding if kwargs else "max_length"
+        # self.max_length = max_length
         if self.truncation_strategy and self.max_length:
             self.return_truncated_tokens = True
 
@@ -38,16 +42,19 @@ class NERProcessor(object):
                 previous_word_idx = word_idx
             return label_ids
 
-        if split == "train":
+        if split in ["train", "validation", "shuffled_validation"]:
             tokenized_inputs = self._tokenizer(examples["tokens"],
                                                truncation=self.truncation_strategy,
                                                is_split_into_words=True,
                                                max_length=self.max_length,
-                                               return_overflowing_tokens=self.return_truncated_tokens)
+                                               return_overflowing_tokens=self.return_truncated_tokens,
+                                               padding=self.padding)
         else:
             tokenized_inputs = self._tokenizer(examples["tokens"],
-                                               truncation=True,
-                                               is_split_into_words=True)
+                                               truncation=self.truncation_strategy,
+                                               padding=self.padding,
+                                               is_split_into_words=True,
+                                               )
         labels = []
         j = 0
         for i, label in enumerate(examples[f"ner_tags"]):

@@ -15,7 +15,7 @@ class CrossEntropyLossPerPosition(Module):
                                         reduction="none")
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return torch.stack([self.ce_loss(input[i], target[i])[1:-1] for i in range(input.shape[0])])
+        return torch.stack([self.ce_loss(input[i], target[i]) for i in range(input.shape[0])]).T
 
 
 def padded_stack(

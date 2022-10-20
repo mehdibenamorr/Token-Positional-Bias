@@ -1,6 +1,7 @@
+import wandb
 from datasets import load_metric
 import numpy as np
-
+import pandas as pd
 metric = load_metric("seqeval")
 
 
@@ -52,6 +53,9 @@ def compute_ner_pos_f1(p, label_list):
             positions = []
             for sample in true_labels:
                 positions += find_class_pos(sample, l)
-            results[l].update({"positions": positions})
+            data_dict = {'positions': pd.Series(positions)}
+            table = wandb.Table(dataframe=pd.DataFrame(data_dict))
+            wandb.log({f'{l}_positions': table})
+            # results[l].update({"positions": positions})
 
     return results
