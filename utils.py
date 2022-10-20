@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# file: random_seed.py
+# file: utils.py
 # refer to :
 # issue: https://pytorch.org/docs/stable/notes/randomness.html#reproducibility
 

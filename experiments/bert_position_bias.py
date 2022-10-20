@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: train.py
+# file: bert_position_bias.py
 #
 import pandas as pd
 

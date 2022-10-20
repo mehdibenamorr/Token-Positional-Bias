@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# file: collate_fn.py
+#
 from dataclasses import dataclass
 from typing import Union, Optional
 

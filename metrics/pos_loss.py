@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# file: pos_loss.py
+#
 from typing import Optional, List, Union
 
 import torch

@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# file: ner_f1.py
+#
 import wandb
 from datasets import load_metric
 import numpy as np

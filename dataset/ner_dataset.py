@@ -1,13 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# file: ner_dataset.py
+#
 # Ref: https://github.com/huggingface/datasets/blob/master/datasets/conll2003/conll2003.py
 
-import datasets
 import os
 from pathlib import Path
 
-import numpy as np
-from datasets import ClassLabel, DownloadConfig
 import datasets
 import matplotlib.pyplot as plt
+import numpy as np
+from datasets import ClassLabel, DownloadConfig
 
 
 class NERDatasetConfig(datasets.BuilderConfig):

@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# file: preprocess.py
+#
 from utils import set_random_seed
 
 set_random_seed(23456)
