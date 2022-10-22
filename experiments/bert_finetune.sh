@@ -21,6 +21,7 @@ PADDING_SIDE=right
 SHUFFLE=false
 SHUFFLE_DEV=$2
 CONCAT=$3
+EXPERIMENT=$4
 
 OUTPUT_DIR=/data/.position_bias
 
@@ -32,6 +33,7 @@ export PYTHONPATH="$PYTHONPATH:$REPO"
 python ${REPO}/experiments/bert_position_bias.py \
 --output_dir=${OUTPUT_DIR} \
 --dataset=${DATASET} \
+--experiment=${EXPERIMENT} \
 --seq_length=${SEQ_LENTGH} \
 --padding=${PADDING} \
 --nbruns=${NBRUNS} \

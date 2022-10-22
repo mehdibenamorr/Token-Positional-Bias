@@ -32,7 +32,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('-model', type=str, default='bert-base-uncased',
                         help='Name of a specific model previously saved inside "models" folder'
                              ' or name of an HuggingFace model')
-    parser.add_argument('-experiment', type=str, default='bert-position-bias',
+    parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
     parser.add_argument("--seq_length", type=str, default="max", choices=["max", "median", "min"],
