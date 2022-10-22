@@ -24,10 +24,12 @@ from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
 from metrics.ner_f1 import compute_ner_pos_f1
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
+from datasets import Dataset
 import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 os.environ['WANDB_DISABLED'] = "true"
+
 
 class BertForNERTask(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, **kwargs):
@@ -38,6 +40,8 @@ class BertForNERTask(Trainer):
         self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
         self.shuffle = all_args.shuffle
+        self.shuffle_dev = all_args.shuffle_eval
+        self.concat = all_args.concat
         self.all_args = all_args
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
@@ -52,9 +56,9 @@ class BertForNERTask(Trainer):
                                                                fn_kwargs={"split": "train"}, batched=True)
         self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
                                                                    fn_kwargs={"split": "validation"}, batched=True)
-        self.eval_dataset = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,
-                                                                            fn_kwargs={"split": "shuffled_validation"},
-                                                                            batched=True)
+        self.shuffled_eval = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,
+                                                                             fn_kwargs={"split": "shuffled_validation"},
+                                                                             batched=True)
 
         self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
                                                              fn_kwargs={"split": "test"}, batched=True)
@@ -98,6 +102,19 @@ class BertForNERTask(Trainer):
         self.training = True
         return super().training_step(model=model, inputs=inputs)
 
+    def evaluate(
+            self,
+            eval_dataset: Optional[Dataset] = None,
+            ignore_keys: Optional[List[str]] = None,
+            metric_key_prefix: str = "eval",
+    ) -> Dict[str, float]:
+        if self.shuffle_dev == "true":
+            return super().evaluate(eval_dataset=self.shuffled_eval, ignore_keys=ignore_keys,
+                                    metric_key_prefix=metric_key_prefix)
+        else:
+            return super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys,
+                                    metric_key_prefix=metric_key_prefix)
+
     def evaluation_loop(
             self,
             dataloader: DataLoader,
@@ -122,7 +139,7 @@ class BertForNERTask(Trainer):
                                                                self.max_length).detach().cpu().numpy()
         dev_losses = padded_stack(self.losses["dev"]).view(-1,
                                                            self.max_length).detach().cpu().numpy()
-        train_ = pd.DataFrame({f"pos_{k}": train_losses[:,k].tolist() for k in range(train_losses.shape[1])})
+        train_ = pd.DataFrame({f"pos_{k}": train_losses[:, k].tolist() for k in range(train_losses.shape[1])})
         table = wandb.Table(dataframe=train_)
         wandb.log({"train_loss/pos": table})
         eval_ = pd.DataFrame({f"pos_{k}": dev_losses[:, k].tolist() for k in range(dev_losses.shape[1])})

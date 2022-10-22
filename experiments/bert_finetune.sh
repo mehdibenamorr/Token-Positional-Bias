@@ -3,7 +3,7 @@
 
 #Training ARGS
 SEED=23456
-TRAIN_BATCH_SIZE=5
+TRAIN_BATCH_SIZE=16
 EVAL_BATCH_SIZE=12
 #MAX_LENGTH=128
 SEQ_LENTGH=max
@@ -15,13 +15,15 @@ MAX_EPOCH=5
 #Script ARGS
 MODEL=bert-base-uncased
 DATASET=$1
-NBRUNS=5
+NBRUNS=1
 PADDING=max_length
-PADDING_SIDE=$2
-
+PADDING_SIDE=right
+SHUFFLE=false
+SHUFFLE_DEV=$2
+CONCAT=$3
 
 OUTPUT_DIR=/data/.position_bias
-DEV_SHUFFLE=0.5
+
 
 REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
@@ -40,6 +42,8 @@ python ${REPO}/experiments/bert_position_bias.py \
 --learning_rate ${LR} \
 --lr_scheduler_type ${LR_SCHEDULE} \
 --num_train_epochs ${MAX_EPOCH} \
---shuffle \
---truncation
-
+--shuffle ${SHUFFLE} \
+--shuffle_eval ${SHUFFLE_DEV} \
+--concat ${CONCAT} \
+--truncation \
+--debugging
