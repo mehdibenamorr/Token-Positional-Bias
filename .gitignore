@@ -6,6 +6,7 @@
 src/hyperparameter_optimization/data/pamap.pkl
 ~*
 
+plots/files
 
 ## Standard Files from sharing
 .DS*

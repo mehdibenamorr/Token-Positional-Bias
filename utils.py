@@ -51,8 +51,14 @@ def get_parser() -> argparse.ArgumentParser:
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
-    parser.add_argument('--shuffle', action='store_true',
+    parser.add_argument('--shuffle',  type=str, default="false", choices=["false", "true"],
                         help='If set, random sequences in training batches will be shuffled',
+                        )
+    parser.add_argument('--shuffle_eval',  type=str, default="false", choices=["false", "true"],
+                        help='If set, shuffled eval set will be used',
+                        )
+    parser.add_argument('--concat', type=str, default="false", choices=["false", "true"],
+                        help='If set, sequences are concatenated in batches randomly',
                         )
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '

@@ -45,6 +45,7 @@ class DataCollator(DataCollatorMixin):
     max_length: Optional[int] = None
     pad_to_multiple_of: Optional[int] = None
     label_pad_token_id: int = -100
+    shuffling: str = "false"
     return_tensors: str = "pt"
 
     def torch_call(self, features):

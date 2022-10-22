@@ -179,8 +179,8 @@ class NERDataset(object):
         train = [len(a["tokens"]) for a in self.dataset["train"]]
         dev = [len(a["tokens"]) for a in self.dataset["validation"]]
         test = [len(a["tokens"]) for a in self.dataset["test"]]
-        sequence_lengths = train + dev + test
-        return {"max": max(sequence_lengths)+2, "median": int(np.median(sequence_lengths))+2, "min": min(sequence_lengths)+2}
+        self.sequence_lengths = train + dev + test
+        return {"max": max(self.sequence_lengths)+2, "median": int(np.median(self.sequence_lengths))+2, "min": min(self.sequence_lengths)+2}
 
     @property
     def labels(self) -> ClassLabel:

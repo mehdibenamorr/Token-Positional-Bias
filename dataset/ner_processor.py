@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 # file: ner_processor.py
 #
+import itertools
+import random
+from operator import itemgetter
+
+import datasets
 from transformers import AutoTokenizer
 
 
@@ -19,6 +24,8 @@ class NERProcessor(object):
         # self.max_length = max_length
         if self.truncation_strategy and self.max_length:
             self.return_truncated_tokens = True
+        self.shuffle = kwargs.shuffle
+        self.concat = kwargs.concat
 
     @property
     def tokenizer(self):
@@ -46,22 +53,24 @@ class NERProcessor(object):
                 previous_word_idx = word_idx
             return label_ids
 
+        examples_ = process_batch(examples, shuffle=self.shuffle, concat=self.concat, split=split)
+
         if split in ["train", "validation", "shuffled_validation"]:
-            tokenized_inputs = self._tokenizer(examples["tokens"],
+            tokenized_inputs = self._tokenizer(examples_["tokens"],
                                                truncation=self.truncation_strategy,
                                                is_split_into_words=True,
                                                max_length=self.max_length,
                                                return_overflowing_tokens=self.return_truncated_tokens,
                                                padding=self.padding)
         else:
-            tokenized_inputs = self._tokenizer(examples["tokens"],
+            tokenized_inputs = self._tokenizer(examples_["tokens"],
                                                truncation=self.truncation_strategy,
                                                padding=self.padding,
                                                is_split_into_words=True,
                                                )
         labels = []
         j = 0
-        for i, label in enumerate(examples[f"ner_tags"]):
+        for i, label in enumerate(examples_[f"ner_tags"]):
             word_ids = tokenized_inputs.word_ids(batch_index=j)
             overflowing_tokens = tokenized_inputs.encodings[j].overflowing if hasattr(tokenized_inputs.encodings[j],
                                                                                       "overflowing") else None
@@ -78,10 +87,33 @@ class NERProcessor(object):
         # Extract mapping between new and old indices
         sample_map = tokenized_inputs.pop("overflow_to_sample_mapping", None)
         if sample_map is not None:
-            for key, values in examples.items():
+            for key, values in examples_.items():
                 tokenized_inputs[key] = [values[i] for i in sample_map]
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
+
+
+def process_batch(examples, ratio=0.5, shuffle=False, concat=False, split="train"):
+    features_ = examples.data
+    if concat and split == "train":
+        indices = [i for i in range(len(features_["id"]))]
+        n = int(ratio * len(indices))
+        to_concat = random.sample(indices, n) if ratio < 1.0 else indices
+        chunk_size = 5
+        tokens = []
+        tags = []
+        for i in range(0, len(to_concat), chunk_size):
+            concat_ids = to_concat[i:i + chunk_size]
+            tokens.append(
+                [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["tokens"])))])
+            tags.append(
+                [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["ner_tags"])))])
+
+        examples.data = {"id": [str(i) for i in range(len(tokens))],
+                         "tokens": tokens,
+                         "ner_tags": tags}
+
+    return examples
 
 
 if __name__ == '__main__':
