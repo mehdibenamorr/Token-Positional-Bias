@@ -46,4 +46,3 @@ python ${REPO}/experiments/bert_position_bias.py \
 --shuffle_eval ${SHUFFLE_DEV} \
 --concat ${CONCAT} \
 --truncation \
---debugging

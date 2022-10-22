@@ -93,9 +93,9 @@ class NERProcessor(object):
         return tokenized_inputs
 
 
-def process_batch(examples, ratio=0.5, shuffle=False, concat=False, split="train"):
+def process_batch(examples, ratio=0.5, shuffle="false", concat="false", split="train"):
     features_ = examples.data
-    if concat and split == "train":
+    if concat == "true" and split == "train":
         indices = [i for i in range(len(features_["id"]))]
         n = int(ratio * len(indices))
         to_concat = random.sample(indices, n) if ratio < 1.0 else indices
