@@ -123,8 +123,11 @@ def processing_args() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     parser = processing_args()
     args = parser.parse_args()
+    # ### Train dataset
+    train_path = os.path.join(args.data_dir, args.dataset, "train.word.iobes")
+    process_data(train_path, ratio=0.5)
 
-    ### Dev dataset
+    # ### Dev dataset
     print(args.data_dir)
     dev_path = os.path.join(args.data_dir, args.dataset, "dev.word.iobes")
     process_data(dev_path, ratio=0.5)

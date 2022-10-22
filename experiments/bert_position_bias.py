@@ -52,8 +52,12 @@ class BertForNERTask(Trainer):
             self.seq_length] if all_args.max_length is None else all_args.max_length
         self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
                                       kwargs=all_args)
-        self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
+        if self.shuffle=="false":
+            self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
                                                                fn_kwargs={"split": "train"}, batched=True)
+        else:
+            self.train_dataset = self.dataset.dataset["train-shuffled"].map(self.processor.tokenize_and_align_labels,
+                                                                   fn_kwargs={"split": "train"}, batched=True)
         self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
                                                                    fn_kwargs={"split": "validation"}, batched=True)
         self.shuffled_eval = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,

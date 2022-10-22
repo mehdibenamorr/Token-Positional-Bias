@@ -59,6 +59,7 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                                                  description=CONFIGS[dataset]["description"])]
         self._url = URLS[dataset]
         self._train_file = train_file
+        self._train_file_shuffled = f"{train_file}.shuffled"
         self._dev_file = dev_file
         self._dev_file_shuffled = f"{dev_file}.shuffled"
         self._test_file = test_file
@@ -108,6 +109,7 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
         """Returns SplitGenerators."""
         urls_to_download = {
             "train": f"{self._url}{self._train_file}",
+            "train-shuffled": f"{self._url}{self._train_file_shuffled}",
             "dev": f"{self._url}{self._dev_file}",
             "dev-shuffled": f"{self._url}{self._dev_file_shuffled}",
             "test": f"{self._url}{self._test_file}",
@@ -119,6 +121,8 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": downloaded_files["train"]}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={"filepath": downloaded_files["dev"]}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": downloaded_files["test"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_train"),
+                                    gen_kwargs={"filepath": downloaded_files["train-shuffled"]}),
             datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_validation"),
                                     gen_kwargs={"filepath": downloaded_files["dev-shuffled"]}),
             datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_test"),
@@ -198,6 +202,9 @@ class NERDataset(object):
 
     def train(self):
         return self._dataset['train']
+
+    def train_shuffled(self):
+        return self._dataset['shuffled-train']
 
     def test(self):
         return self._dataset["test"]
