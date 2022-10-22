@@ -100,8 +100,9 @@ def process_batch(examples, ratio=0.5, shuffle="false", concat="false", split="t
         n = int(ratio * len(indices))
         to_concat = random.sample(indices, n) if ratio < 1.0 else indices
         chunk_size = 5
-        tokens = []
-        tags = []
+        rest_idx = [a for a in indices if a not in to_concat]
+        tokens = [list(itemgetter(*rest_idx)(features_["tokens"]))]
+        tags = [list(itemgetter(*rest_idx)(features_["tokens"]))]
         for i in range(0, len(to_concat), chunk_size):
             concat_ids = to_concat[i:i + chunk_size]
             tokens.append(

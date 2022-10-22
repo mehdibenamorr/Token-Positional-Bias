@@ -47,7 +47,7 @@ class BertForNERTask(Trainer):
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
 
         # Dataset
-        self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
+        self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging, concat=self.concat)
         self.max_length = self.dataset.max_length[
             self.seq_length] if all_args.max_length is None else all_args.max_length
         self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
@@ -152,7 +152,7 @@ def main():
     training_args, args = parser.parse_args_into_dataclasses()
     os.makedirs(training_args.output_dir, exist_ok=True)
     os.environ["WANDB_DIR"] = training_args.output_dir
-    experiment_name = f"bert-position-bias-{args.dataset}"
+    experiment_name = f"{args.experiment}-{args.dataset}"
     run_name = f"max_length={args.max_length}/{args.seq_length}-truncate={args.truncation}-padding={args.padding}-" \
                f"shuffle={args.shuffle}-seed={training_args.seed}"
     for i in range(args.nbruns):

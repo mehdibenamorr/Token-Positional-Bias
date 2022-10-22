@@ -50,10 +50,12 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                  dev_file="dev.word.iobes",
                  test_file="test.word.iobes",
                  debugging=False,
+                 concat= "false",
                  **kwargs):
         self._ner_tags = self.get_labels(dataset)
-        suffix = "_debug" if debugging else ""
-        self.BUILDER_CONFIGS = [NERDatasetConfig(name=dataset + suffix, version=CONFIGS[dataset]["version"],
+        suffix_ = "_debug" if debugging else ""
+        suffix = "_concat" if concat=="true" else ""
+        self.BUILDER_CONFIGS = [NERDatasetConfig(name=dataset + suffix + suffix_, version=CONFIGS[dataset]["version"],
                                                  description=CONFIGS[dataset]["description"])]
         self._url = URLS[dataset]
         self._train_file = train_file
@@ -160,12 +162,12 @@ class NERDataset(object):
     """
     NAME = "NERDataset"
 
-    def __init__(self, dataset="conll03", debugging=False):
+    def __init__(self, dataset="conll03", debugging=False, concat="false"):
         cache_dir = os.path.join(str(Path.home()), '.ner_datasets')
         print("Cache directory: ", cache_dir)
         os.makedirs(cache_dir, exist_ok=True)
         download_config = DownloadConfig(cache_dir=cache_dir)
-        self._dataset = NERDatasetbuilder(cache_dir=cache_dir, dataset=dataset, debugging=debugging)
+        self._dataset = NERDatasetbuilder(cache_dir=cache_dir, dataset=dataset, debugging=debugging, concat=concat)
         print("Cache1 directory: ", self._dataset.cache_dir)
         self._dataset.download_and_prepare(download_config=download_config)
         self._dataset = self._dataset.as_dataset()
