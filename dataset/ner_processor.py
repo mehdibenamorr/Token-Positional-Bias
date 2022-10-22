@@ -105,10 +105,16 @@ def process_batch(examples, ratio=0.5, shuffle="false", concat="false", split="t
         tags = [x for x in list(itemgetter(*rest_idx)(features_["ner_tags"]))]
         for i in range(0, len(to_concat), chunk_size):
             concat_ids = to_concat[i:i + chunk_size]
-            tokens.append(
-                [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["tokens"])))])
-            tags.append(
-                [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["ner_tags"])))])
+            if len(concat_ids) > 1:
+                tokens.append(
+                    [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["tokens"])))])
+                tags.append(
+                    [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features_["ner_tags"])))])
+            else:
+                tokens.append(
+                    [x for x in list(itemgetter(*concat_ids)(features_["tokens"]))])
+                tags.append(
+                    [x for x in list(itemgetter(*concat_ids)(features_["ner_tags"]))])
 
         examples.data = {"id": [str(i) for i in range(len(tokens))],
                          "tokens": tokens,

@@ -1,0 +1,33 @@
+{
+    "os": "macOS-10.16-x86_64-i386-64bit",
+    "python": "3.8.13",
+    "heartbeatAt": "2022-10-22T06:57:05.664195",
+    "startedAt": "2022-10-22T06:57:05.123114",
+    "docker": null,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [
+        "--output_dir",
+        "bias_paper",
+        "--dataset",
+        "ontonotes5",
+        "--seq_length",
+        "max",
+        "--nbruns",
+        "1",
+        "--concat",
+        "true"
+    ],
+    "state": "running",
+    "program": "/Users/mehdi/Desktop/workspace/Research/p-22-ner-position-bias/experiments/bert_position_bias.py",
+    "codePath": "experiments/bert_position_bias.py",
+    "git": {
+        "remote": "git@gitlab.pads.fim.uni-passau.de:Mehdi/p-22-ner-position-bias.git",
+        "commit": "3f87044bf6ac289352db6363cd5c3b411bf31142"
+    },
+    "email": null,
+    "root": "/Users/mehdi/Desktop/workspace/Research/p-22-ner-position-bias",
+    "host": "Mehdis-MacBook-Air.local",
+    "username": "mehdi",
+    "executable": "/opt/anaconda3/envs/p-22-ner-position-bias/bin/python"
+}

@@ -1,0 +1,13 @@
+diff --git a/experiments/bert_position_bias.py b/experiments/bert_position_bias.py
+index 1bc839c..d5dfd09 100644
+--- a/experiments/bert_position_bias.py
++++ b/experiments/bert_position_bias.py
+@@ -56,7 +56,7 @@ class BertForNERTask(Trainer):
+             self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
+                                                                fn_kwargs={"split": "train"}, batched=True)
+         else:
+-            self.train_dataset = self.dataset.dataset["train-shuffled"].map(self.processor.tokenize_and_align_labels,
++            self.train_dataset = self.dataset.dataset["shuffled_train"].map(self.processor.tokenize_and_align_labels,
+                                                                    fn_kwargs={"split": "train"}, batched=True)
+         self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
+                                                                    fn_kwargs={"split": "validation"}, batched=True)
