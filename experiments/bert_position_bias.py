@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 # file: bert_position_bias.py
 #
-import pandas as pd
-
 from utils import set_random_seed
 
 set_random_seed(23456)
 
+import pandas as pd
+from transformers.trainer_utils import EvalLoopOutput
 import argparse
 from typing import Dict, Union, Any, Optional, List
 import os
@@ -28,6 +28,8 @@ from datasets import Dataset
 import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
+
+
 # os.environ['WANDB_DISABLED'] = "true"
 
 
@@ -52,12 +54,12 @@ class BertForNERTask(Trainer):
             self.seq_length] if all_args.max_length is None else all_args.max_length
         self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
                                       kwargs=all_args)
-        if self.shuffle=="false":
-            self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
+        # if self.shuffle=="false":
+        self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
                                                                fn_kwargs={"split": "train"}, batched=True)
-        else:
-            self.train_dataset = self.dataset.dataset["shuffled_train"].map(self.processor.tokenize_and_align_labels,
-                                                                   fn_kwargs={"split": "train"}, batched=True)
+        # else:
+        #     self.train_dataset = self.dataset.dataset["shuffled_train"].map(self.processor.tokenize_and_align_labels,
+        #                                                            fn_kwargs={"split": "train"}, batched=True)
         self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
                                                                    fn_kwargs={"split": "validation"}, batched=True)
         self.shuffled_eval = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,
@@ -129,9 +131,19 @@ class BertForNERTask(Trainer):
     ):
 
         self.training = False
-        return super().evaluation_loop(dataloader=dataloader, description=description,
-                                       prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys,
-                                       metric_key_prefix=metric_key_prefix)
+        eval_output = super().evaluation_loop(dataloader=dataloader, description=description,
+                                              prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys,
+                                              metric_key_prefix=metric_key_prefix)
+        # Log position distribution
+        metrics = eval_output.metrics
+        for l in metrics.keys():
+            if isinstance(metrics[l], dict):
+                table = metrics[l].pop("positions_distribution", None)
+                if table:
+                    wandb.log({f'{l}.positions_distribution': wandb.plot.histogram(table, "positions",
+                                                                                   title=f'{l}.positions_distribution')})
+        return EvalLoopOutput(predictions=eval_output.predictions, label_ids=eval_output.label_ids, metrics=metrics,
+                              num_samples=eval_output.num_samples)
 
     def test(self):
         super().evaluate(eval_dataset=self.shuffled_test, metric_key_prefix="test_shuffle")

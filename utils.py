@@ -49,7 +49,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--padding_side", type=str, default="right", choices=["right", "left", "random"],
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
-    parser.add_argument("--padding", type=str, default="longest", choices=["max_length", "longest", "do_not_pad"],
+    parser.add_argument("--padding", type=str, default=None, choices=["max_length", "longest", "do_not_pad",None],
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
@@ -59,7 +59,10 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--shuffle_eval',  type=str, default="false", choices=["false", "true"],
                         help='If set, shuffled eval set will be used',
                         )
-    parser.add_argument('--concat', type=str, default="false", choices=["false", "true"],
+    parser.add_argument('--concat', type=str, default="false", choices=["train", "test", "all", "false"],
+                        help='If set, sequences are concatenated in batches randomly',
+                        )
+    parser.add_argument('--concat_method', type=str, default="duplicate", choices=["duplicate", "random"],
                         help='If set, sequences are concatenated in batches randomly',
                         )
     parser.add_argument('--position_embedding_type', default='absolute',

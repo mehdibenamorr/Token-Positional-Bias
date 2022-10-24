@@ -59,7 +59,6 @@ def compute_ner_pos_f1(p, label_list):
                 positions += find_class_pos(sample, l)
             data_dict = {'positions': pd.Series(positions)}
             table = wandb.Table(dataframe=pd.DataFrame(data_dict))
-            wandb.log({f'{l}_positions': table})
-            # results[l].update({"positions": positions})
+            results[l].update({"positions_distribution": table})
 
     return results
