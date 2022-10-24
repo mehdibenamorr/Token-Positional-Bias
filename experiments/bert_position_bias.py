@@ -169,10 +169,11 @@ def main():
     os.makedirs(training_args.output_dir, exist_ok=True)
     os.environ["WANDB_DIR"] = training_args.output_dir
     experiment_name = f"{args.experiment}-{args.dataset}"
-    run_name = f"max_length={args.max_length}/{args.seq_length}-truncate={args.truncation}-padding={args.padding}-" \
-               f"shuffle={args.shuffle}-seed={training_args.seed}"
+    tags = [f"max_length={args.max_length}", f"seq_length={args.seq_length}", f"truncate={args.truncation}",
+            f"padding={args.padding}", f"shuffle={args.shuffle}", f"seed={training_args.seed}",
+            f"padding_side={args.padding_side}"]
     for i in range(args.nbruns):
-        wandb.init(project=experiment_name, name=run_name + f"_{i + 1}")
+        wandb.init(project=experiment_name, name=f"train_{args.dataset}" + f"run:{i + 1}", tags=tags)
         print(f"Run number:{i + 1}")
         task_trainer = BertForNERTask(all_args=args, training_args=training_args)
         task_trainer.train()
