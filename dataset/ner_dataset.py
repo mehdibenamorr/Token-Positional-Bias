@@ -50,11 +50,11 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                  dev_file="dev.word.iobes",
                  test_file="test.word.iobes",
                  debugging=False,
-                 concat= "false",
+                 concat="false",
                  **kwargs):
         self._ner_tags = self.get_labels(dataset)
         suffix_ = "_debug" if debugging else ""
-        suffix = "_concat" if concat=="true" else ""
+        suffix = "_concat" if concat != "false" else ""
         self.BUILDER_CONFIGS = [NERDatasetConfig(name=dataset + suffix + suffix_, version=CONFIGS[dataset]["version"],
                                                  description=CONFIGS[dataset]["description"])]
         self._url = URLS[dataset]
@@ -186,7 +186,8 @@ class NERDataset(object):
         dev = [len(a["tokens"]) for a in self.dataset["validation"]]
         test = [len(a["tokens"]) for a in self.dataset["test"]]
         self.sequence_lengths = train + dev + test
-        return {"max": max(self.sequence_lengths)+2, "median": int(np.median(self.sequence_lengths))+2, "min": min(self.sequence_lengths)+2}
+        return {"max": max(self.sequence_lengths) + 2, "median": int(np.median(self.sequence_lengths)) + 2,
+                "min": min(self.sequence_lengths) + 2}
 
     @property
     def labels(self) -> ClassLabel:
