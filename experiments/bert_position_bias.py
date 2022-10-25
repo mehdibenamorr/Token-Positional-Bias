@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # file: bert_position_bias.py
 #
-from plots.plot import plot_loss_dist
+
 from utils import set_random_seed
 
 set_random_seed(23456)
-
+from plots.plot import plot_loss_dist
 import pandas as pd
 from transformers.trainer_utils import EvalLoopOutput
 import argparse
@@ -89,24 +89,21 @@ class BertForNERTask(Trainer):
                                              compute_metrics=lambda p: compute_ner_pos_f1(p=p,
                                                                                           label_list=self.dataset.labels),
                                              **kwargs)
-        # self.test_dataset = self.processed_dataset["test"]
         self.loss_pos_fn = CrossEntropyLossPerPosition()
         self.losses = {"train": [], "dev": []}
-        self.training = False
 
     def compute_loss(self, model, inputs, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         labels = inputs["labels"]
         logits = outputs["logits"]
         loss_per_pos = self.loss_pos_fn(logits, labels)
-        if self.training:
+        if self.is_in_train:
             self.losses["train"].append(loss_per_pos)
         else:
             self.losses["dev"].append(loss_per_pos)
         return (loss, outputs) if return_outputs else loss
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        self.training = True
         return super().training_step(model=model, inputs=inputs)
 
     def evaluate(
@@ -188,9 +185,10 @@ def main():
             f"padding={args.padding}", f"shuffle={args.shuffle}", f"seed={training_args.seed}",
             f"padding_side={args.padding_side}"]
     for i in range(args.nbruns):
+        config = vars(args)
         wandb.init(project=experiment_name, name=f"{args.dataset}," + ",".join(
             [f"seq_length={args.seq_length}", f"padding={args.padding}",
-             f"padding_side={args.padding_side}"]) + f",run:{i + 1}", tags=tags)
+             f"padding_side={args.padding_side}"]) + f",run:{i + 1}", tags=tags, config=config)
         print(f"Run number:{i + 1}")
         task_trainer = BertForNERTask(all_args=args, training_args=training_args)
         task_trainer.train()

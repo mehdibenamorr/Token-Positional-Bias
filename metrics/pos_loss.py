@@ -19,6 +19,7 @@ class CrossEntropyLossPerPosition(Module):
                                         reduction="none")
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        # Average losses per position (without counting zeros)
         return torch.stack([self.ce_loss(input[i], target[i]) for i in range(input.shape[0])]).T
 
 
