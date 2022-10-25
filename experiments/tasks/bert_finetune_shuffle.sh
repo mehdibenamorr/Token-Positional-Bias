@@ -11,6 +11,7 @@ OPTIMIZER=adamw_hf
 LR_SCHEDULE=linear
 LR=5e-5
 MAX_EPOCH=5
+EVAL_STRATEGY=steps
 
 #Script ARGS
 EXPERIMENT=bert_finetune
@@ -21,7 +22,7 @@ PADDING=max_length
 PADDING_SIDE=right
 SHUFFLE=true
 SHUFFLE_DEV=false
-CONCAT=test
+CONCAT=false
 CONCAT_METHOD=duplicate
 
 
