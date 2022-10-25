@@ -53,7 +53,26 @@ sns.set(context='paper', style='white', font_scale=1.5, color_codes=True, rc=sty
 sns.set_theme(style="ticks")
 plots_path = 'plots/files/'
 
+def plot_pos_dist(data):
+    f, ax = plt.subplots(figsize=(7.25, 5.43))
+    # Plot the orbital period with horizontal boxes
+    sns.boxplot(data=data, x="position", y="class",
+                width=.4, palette="Set2", hue="f1",whis=[0, 100])
+    # Tweak the visual presentation
+    ax.set(ylabel="", xlabel='Positions')
 
+    return f
+
+
+def plot_loss_dist(data):
+    f, ax = plt.subplots(figsize=(7.25, 5.43))
+    # Plot the orbital period with horizontal boxes
+    sns.boxplot(data=data, x="position", y="loss",
+                width=.4, palette="Set2", whis=[0, 100])
+    # Tweak the visual presentation
+    ax.set(ylabel="Loss", xlabel='positions')
+
+    return f
 # Datasets
 def dataset_plot():
     conll03 = NERDataset(dataset="conll03")
