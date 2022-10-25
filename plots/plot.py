@@ -6,7 +6,7 @@ import wandb
 
 from dataset.ner_dataset import NERDataset
 
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 import seaborn as sns
