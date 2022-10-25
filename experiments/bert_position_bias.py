@@ -142,6 +142,9 @@ class BertForNERTask(Trainer):
                 if table:
                     wandb.log({f'{l}.positions_distribution': wandb.plot.histogram(table, "positions",
                                                                                    title=f'{l}.positions_distribution')})
+        pr_curve = metrics.pop(f"{metric_key_prefix}_pr", None)
+        roc_curve = metrics.pop(f"{metric_key_prefix}_roc", None)
+        wandb.log({f"{metric_key_prefix}_pr_curve": pr_curve, f"{metric_key_prefix}_roc_curve": roc_curve})
         return EvalLoopOutput(predictions=eval_output.predictions, label_ids=eval_output.label_ids, metrics=metrics,
                               num_samples=eval_output.num_samples)
 
@@ -158,6 +161,7 @@ class BertForNERTask(Trainer):
         train_ = pd.DataFrame({f"pos_{k}": train_losses[:, k].tolist() for k in range(train_losses.shape[1])})
         table = wandb.Table(dataframe=train_)
         wandb.log({"train_loss/pos": table})
+
         eval_ = pd.DataFrame({f"pos_{k}": dev_losses[:, k].tolist() for k in range(dev_losses.shape[1])})
         table = wandb.Table(dataframe=eval_)
         wandb.log({"eval_loss/pos": table})
@@ -173,7 +177,9 @@ def main():
             f"padding={args.padding}", f"shuffle={args.shuffle}", f"seed={training_args.seed}",
             f"padding_side={args.padding_side}"]
     for i in range(args.nbruns):
-        wandb.init(project=experiment_name, name=f"train_{args.dataset}" + f"run:{i + 1}", tags=tags)
+        wandb.init(project=experiment_name, name=f"{args.dataset}" + ",".join(
+            [f"seq_length={args.seq_length}", f"padding={args.padding}",
+             f"padding_side={args.padding_side}"]) + f"run:{i + 1}", tags=tags)
         print(f"Run number:{i + 1}")
         task_trainer = BertForNERTask(all_args=args, training_args=training_args)
         task_trainer.train()
