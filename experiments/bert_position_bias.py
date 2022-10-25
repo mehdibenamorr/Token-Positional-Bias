@@ -175,7 +175,7 @@ class BertForNERTask(Trainer):
         eval_ = pd.DataFrame(data=data, columns=["loss", "position"])
         f = plot_loss_dist(eval_)
         # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
-        wandb.log({"eval_loss_dist": f})
+        wandb.log({"eval_loss_dist": wandb.Image(f)})
 
 
 def main():
