@@ -9,6 +9,7 @@ import argparse
 import os
 import random
 from tqdm import tqdm
+import numpy as np
 
 
 def tags_to_spans(tokens, tags):
@@ -68,8 +69,7 @@ def shuffle_dataset(dataset, ratio=0.2):
     return shuffled
 
 
-def process_data(filepath, ratio=None):
-    # The full dataset split (val, or test)
+def read_data(filepath):
     dataset = dict()
     with open(filepath, encoding="utf-8") as f:
         guid = 0
@@ -91,15 +91,44 @@ def process_data(filepath, ratio=None):
                 splits = line.split(" ")
                 tokens.append(splits[0])
                 ner_tags.append(splits[1].rstrip())
+    return dataset
+
+
+def process_data(filepath, ratio=None):
+    # The full dataset split (val, or test)
+    dataset = read_data(filepath)
     # Shuffling of tokens
     shuffled = shuffle_dataset(dataset, ratio=ratio)
-    save(shuffled, filename=filepath)
+    save(shuffled, filename=filepath + ".shuffled")
     return shuffled
 
 
-def save(shuffled, filename):
-    with open(filename + ".shuffled", "w") as file:
-        for id, item in shuffled.items():
+def trim_dataset(dataset, data_dir):
+    train = read_data(os.path.join(data_dir, dataset, "train.word.iobes"))
+    dev = read_data(os.path.join(data_dir, dataset, "dev.word.iobes"))
+    test = read_data(os.path.join(data_dir, dataset, "test.word.iobes"))
+    sequence_lengths = [len(a["tokens"]) for i, a in train.items()] + [len(a["tokens"]) for i, a in dev.items()] + [
+        len(a["tokens"]) for i, a in test.items()]
+    ## select 25% - 75% of examples based on the sequence length distribution
+    q1 = np.percentile(sequence_lengths, 15)
+    q3 = np.percentile(sequence_lengths, 75)
+    cut_train = {i: example for i, example in train.items() if
+                 (len(example["tokens"]) <= q3 and len(example["tokens"]) >= q1)}
+    save(cut_train, os.path.join(data_dir, dataset, "train.word.iobes.cut"))
+    cut_test = {i: example for i, example in test.items() if
+                (len(example["tokens"]) <= q3 and len(example["tokens"]) >= q1)}
+    save(cut_test, os.path.join(data_dir, dataset, "test.word.iobes.cut"))
+    cut_dev = {i: example for i, example in dev.items() if
+               (len(example["tokens"]) <= q3 and len(example["tokens"]) >= q1)}
+    save(cut_dev, os.path.join(data_dir, dataset, "dev.word.iobes.cut"))
+    all_ = list(cut_train.values()) + list(cut_dev.values()) + list(cut_test.values())
+    all_data = {str(i): example for i, example in enumerate(all_)}
+    save(all_data, os.path.join(data_dir, dataset, "all.word.iobes.cut"))
+
+
+def save(data, filename):
+    with open(filename, "w") as file:
+        for id, item in data.items():
             for i in range(len(item["tokens"])):
                 file.write(" ".join([item["tokens"][i], item["ner_tags"][i]]))
                 file.write("\n")
@@ -116,6 +145,12 @@ def processing_args() -> argparse.ArgumentParser:
     parser.add_argument("--dev_shuffle",
                         default=0.5,
                         help="percentage of data samples to be shuffled in the validation set")
+    parser.add_argument("--shuffle",
+                        action="store_true",
+                        help="percentage of data samples to be shuffled in the validation set")
+    parser.add_argument("--duplicate",
+                        action="store_true",
+                        help="percentage of data samples to be shuffled in the validation set")
 
     return parser
 
@@ -123,14 +158,18 @@ def processing_args() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     parser = processing_args()
     args = parser.parse_args()
-    # ### Train dataset
-    train_path = os.path.join(args.data_dir, args.dataset, "train.word.iobes")
-    process_data(train_path, ratio=0.5)
 
-    # ### Dev dataset
-    print(args.data_dir)
-    dev_path = os.path.join(args.data_dir, args.dataset, "dev.word.iobes")
-    process_data(dev_path, ratio=0.5)
-    ### Test dataset
-    test_path = os.path.join(args.data_dir, args.dataset, "test.word.iobes")
-    process_data(test_path, ratio=1)
+    # Shuffling experiment
+    if args.shuffle:
+        # ### Train dataset
+        train_path = os.path.join(args.data_dir, args.dataset, "train.word.iobes")
+        process_data(train_path, ratio=0.5)
+        # ### Dev dataset
+        print(args.data_dir)
+        dev_path = os.path.join(args.data_dir, args.dataset, "dev.word.iobes")
+        process_data(dev_path, ratio=0.5)
+        ### Test dataset
+        test_path = os.path.join(args.data_dir, args.dataset, "test.word.iobes")
+        process_data(test_path, ratio=1)
+    elif args.duplicate:
+        trim_dataset(args.dataset, args.data_dir)

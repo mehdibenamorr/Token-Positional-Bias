@@ -35,10 +35,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
-    parser.add_argument("--seq_length", type=str, default="max", choices=["max", "median", "min"],
-                        help="The maximum total input sequence length after tokenization. Sequence longer than this "
-                             "will be truncated, sequences shorter will be padded.")
-    parser.add_argument("--max_length", type=int, default=None,
+    parser.add_argument("--max_length", type=int, default=512,
                         help="The maximum total input sequence length to overwrite seq_length by given number. "
                              "Sequence longer than this "
                              "will be truncated, sequences shorter will be padded.")
@@ -49,21 +46,15 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--padding_side", type=str, default="right", choices=["right", "left", "random"],
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
-    parser.add_argument("--padding", type=str, default=None, choices=["max_length", "longest", "do_not_pad",None],
+    parser.add_argument("--padding", type=str, default=None, choices=["max_length", "longest", "do_not_pad", None],
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
-    parser.add_argument('--shuffle',  type=str, default="false", choices=["false", "true"],
-                        help='If set, random sequences in training batches will be shuffled',
+    parser.add_argument('--concatenate', action="store_true",
+                        help='If set, sequences are concatenated in batches to max_length',
                         )
-    parser.add_argument('--shuffle_eval',  type=str, default="false", choices=["false", "true"],
-                        help='If set, shuffled eval set will be used',
-                        )
-    parser.add_argument('--concat', type=str, default="false", choices=["train", "test", "all", "false"],
-                        help='If set, sequences are concatenated in batches randomly',
-                        )
-    parser.add_argument('--concat_method', type=str, default="duplicate", choices=["duplicate", "random"],
-                        help='If set, sequences are concatenated in batches randomly',
+    parser.add_argument('--duplicate', action="store_true",
+                        help='If set, test set will be duplicated',
                         )
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '

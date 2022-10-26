@@ -35,44 +35,41 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 
 
 class BertForNERTask(Trainer):
-    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, **kwargs):
+    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, dataset: NERDataset,
+                 train: Dataset, eval: Dataset,
+                 processor: NERProcessor, **kwargs):
         # Args
         self.model_path = all_args.model
-        self.dataset_name = all_args.dataset
-        self.seq_length = all_args.seq_length
+        self.max_length = all_args.max_length
         self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
-        self.shuffle = all_args.shuffle
-        self.shuffle_dev = all_args.shuffle_eval
-        self.concat = all_args.concat
+        self.concatenate = all_args.concatenate
         self.all_args = all_args
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
 
-        # Dataset
-        self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging, concat=self.concat)
-        self.max_length = self.dataset.max_length[
-            self.seq_length] if all_args.max_length is None else all_args.max_length
-        self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
-                                      kwargs=all_args)
-        if self.shuffle=="false":
-            self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
-                                                               fn_kwargs={"split": "train"}, batched=True)
-        else:
-            self.train_dataset = self.dataset.dataset["shuffled_train"].map(self.processor.tokenize_and_align_labels,
-                                                                   fn_kwargs={"split": "train"}, batched=True)
-        self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
-                                                                   fn_kwargs={"split": "validation"}, batched=True)
-        self.shuffled_eval = self.dataset.dataset["shuffled_validation"].map(self.processor.tokenize_and_align_labels,
-                                                                             fn_kwargs={"split": "shuffled_validation"},
-                                                                             batched=True)
-
-        self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
-                                                             fn_kwargs={"split": "test"}, batched=True)
-        self.shuffled_test = self.dataset.dataset["shuffled_test"].map(self.processor.tokenize_and_align_labels,
-                                                                       fn_kwargs={"split": "shuffled_test"},
-                                                                       batched=True)
-        self.collate_fn = DataCollator(tokenizer=self.processor.tokenizer, max_length=self.max_length,
+        # # Dataset
+        # self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
+        # self.max_length = self.dataset.max_length[
+        #     self.seq_length] if all_args.max_length is None else all_args.max_length
+        # self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
+        #                               kwargs=all_args)
+        #
+        # self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
+        #                                                        fn_kwargs={"split": "train",
+        #                                                                   "concatenate": self.concatenate},
+        #                                                        batched=True)
+        # self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
+        #                                                            fn_kwargs={"split": "validation"}, batched=True)
+        #
+        # self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
+        #                                                      fn_kwargs={"split": "test"}, batched=True)
+        # self.shuffled_test = self.dataset.dataset["shuffled_test"].map(self.processor.tokenize_and_align_labels,
+        #                                                                fn_kwargs={"split": "shuffled_test"},
+        #                                                                batched=True)
+        self.dataset = dataset
+        self.processor = processor
+        self.collate_fn = DataCollator(tokenizer=processor.tokenizer, max_length=self.max_length,
                                        padding=self.all_args.padding)
 
         # Model loading
@@ -83,9 +80,9 @@ class BertForNERTask(Trainer):
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
-        super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=self.train_dataset,
-                                             eval_dataset=self.eval_dataset,
-                                             data_collator=self.collate_fn, tokenizer=self.processor.tokenizer,
+        super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=train,
+                                             eval_dataset=eval,
+                                             data_collator=self.collate_fn, tokenizer=processor.tokenizer,
                                              compute_metrics=lambda p: compute_ner_pos_f1(p=p,
                                                                                           label_list=self.dataset.labels),
                                              **kwargs)
@@ -112,12 +109,8 @@ class BertForNERTask(Trainer):
             ignore_keys: Optional[List[str]] = None,
             metric_key_prefix: str = "eval",
     ) -> Dict[str, float]:
-        if self.shuffle_dev == "true":
-            return super().evaluate(eval_dataset=self.shuffled_eval, ignore_keys=ignore_keys,
-                                    metric_key_prefix=metric_key_prefix)
-        else:
-            return super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys,
-                                    metric_key_prefix=metric_key_prefix)
+        return super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys,
+                                metric_key_prefix=metric_key_prefix)
 
     def evaluation_loop(
             self,
@@ -128,7 +121,6 @@ class BertForNERTask(Trainer):
             metric_key_prefix: str = "eval",
     ):
 
-        self.training = False
         eval_output = super().evaluation_loop(dataloader=dataloader, description=description,
                                               prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys,
                                               metric_key_prefix=metric_key_prefix)
@@ -148,9 +140,12 @@ class BertForNERTask(Trainer):
         return EvalLoopOutput(predictions=eval_output.predictions, label_ids=eval_output.label_ids, metrics=metrics,
                               num_samples=eval_output.num_samples)
 
-    def test(self):
-        super().evaluate(eval_dataset=self.shuffled_test, metric_key_prefix="test_shuffle")
-        return super().evaluate(eval_dataset=self.test_dataset, metric_key_prefix="test")
+    def test(self,
+             test_dataset: Optional[Dataset] = None,
+             ignore_keys: Optional[List[str]] = None,
+             metric_key_prefix: str = "eval",
+             ) -> Dict[str, float]:
+        return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def log_pos_losses(self):
         ## Logging Loss per pos
@@ -160,7 +155,7 @@ class BertForNERTask(Trainer):
                                                            self.max_length).detach().cpu().numpy()
         data = []
         for k in range(train_losses.shape[1]):
-            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss!=0]
+            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss != 0]
         train_ = pd.DataFrame(data=data, columns=["loss", "position"])
         # table = wandb.Table(dataframe=train_) "train_loss/pos": table,
         f = plot_loss_dist(train_)
@@ -168,7 +163,7 @@ class BertForNERTask(Trainer):
 
         data = []
         for k in range(dev_losses.shape[1]):
-            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss!=0]
+            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss != 0]
         eval_ = pd.DataFrame(data=data, columns=["loss", "position"])
         f = plot_loss_dist(eval_)
         # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
@@ -181,23 +176,45 @@ def main():
     os.makedirs(training_args.output_dir, exist_ok=True)
     os.environ["WANDB_DIR"] = training_args.output_dir
     experiment_name = f"{args.experiment}-{args.dataset}"
-    tags = [f"max_length={args.max_length}", f"seq_length={args.seq_length}", f"truncate={args.truncation}",
-            f"padding={args.padding}", f"shuffle={args.shuffle}", f"seed={training_args.seed}",
+    tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
+            f"padding={args.padding}", f"seed={training_args.seed}",
             f"padding_side={args.padding_side}"]
     for i in range(args.nbruns):
         config = vars(args)
         wandb.init(project=experiment_name, name=f"{args.dataset}," + ",".join(
-            [f"seq_length={args.seq_length}", f"padding={args.padding}",
+            [f"max_length={args.max_length}", f"padding={args.padding}",
              f"padding_side={args.padding_side}"]) + f",run:{i + 1}", tags=tags, config=config)
         print(f"Run number:{i + 1}")
-        task_trainer = BertForNERTask(all_args=args, training_args=training_args)
+
+        # Dataset
+        dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
+        processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+                                 kwargs=config)
+
+        train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
+                                                      fn_kwargs={"concatenate": args.concatenate},
+                                                      batched=True)
+        eval_dataset = dataset.dataset["dev_"].map(processor.tokenize_and_align_labels, batched=True)
+
+        task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
+                                      eval=eval_dataset, dataset=dataset, processor=processor)
         task_trainer.train()
 
         task_trainer.evaluate()
 
-        task_trainer.log_pos_losses()
+        # task_trainer.log_pos_losses()
 
-        task_trainer.test()
+        if args.duplicate:
+            for k in range(1, 11):
+                test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
+                                                           fn_kwargs={"duplicate": args.duplicate, "k": k},
+                                                           load_from_cache_file=False, batched=True)
+
+                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}")
+        else:
+            test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels, load_from_cache_file=False,
+                                                       batched=True)
+            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test")
 
         wandb.finish()
 

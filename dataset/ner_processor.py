@@ -2,11 +2,7 @@
 # -*- coding: utf-8 -*-
 # file: ner_processor.py
 #
-import itertools
-import random
-from operator import itemgetter
 
-import datasets
 from transformers import AutoTokenizer
 
 
@@ -14,19 +10,20 @@ class NERProcessor(object):
     NAME = "NERProcessor"
 
     def __init__(self, pretrained_checkpoint, max_length=None, lower_case=True, kwargs=None):
+        padding_side = kwargs.get("padding_side", "right")
+        padding = kwargs.get("padding", "longest")
+        truncation = kwargs.get("truncation", False)
+
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case,
-                                                        padding_side=kwargs.padding_side)
+                                                        padding_side=padding_side)
         self.padding, self.truncation_strategy, self.max_length, _ = self.tokenizer._get_padding_truncation_strategies(
-            padding=kwargs.padding, truncation=kwargs.truncation,
+            padding=padding, truncation=truncation,
             max_length=max_length)
-        # self.truncation_strategy = kwargs.truncation if kwargs else False
-        self.return_truncated_tokens = kwargs.return_truncated_tokens if kwargs else False
+        self.return_truncated_tokens = kwargs.get("return_truncated_tokens", False)
         # self.padding = kwargs.padding if kwargs else "max_length"
         # self.max_length = max_length
         if self.truncation_strategy and self.max_length:
             self.return_truncated_tokens = True
-        self.shuffle = kwargs.shuffle
-        self.concat = kwargs.concat
 
     @property
     def tokenizer(self):
@@ -34,7 +31,7 @@ class NERProcessor(object):
 
     def tokenize_and_align_labels(self,
                                   examples,
-                                  label_all_tokens=True, split="train"):
+                                  label_all_tokens=True, concatenate=False, duplicate=False, k=2):
 
         def align_label(labels, word_ids, label_all_tokens=True):
             previous_word_idx = None
@@ -54,21 +51,14 @@ class NERProcessor(object):
                 previous_word_idx = word_idx
             return label_ids
 
-        examples_ = process_batch(examples, shuffle=self.shuffle, concat=self.concat, split=split)
+        examples_ = process_batch(examples, concatenate=concatenate, duplicate=duplicate, k=k)
 
-        # if split in ["train", "validation", "shuffled_validation"]:
         tokenized_inputs = self._tokenizer(examples_["tokens"],
                                            truncation=self.truncation_strategy,
                                            is_split_into_words=True,
                                            max_length=self.max_length,
                                            return_overflowing_tokens=self.return_truncated_tokens,
                                            padding=self.padding)
-        # else:
-        #     tokenized_inputs = self._tokenizer(examples_["tokens"],
-        #                                        truncation=self.truncation_strategy,
-        #                                        padding=self.padding,
-        #                                        is_split_into_words=True,
-        #                                        )
         labels = []
         j = 0
         for i, label in enumerate(examples_[f"ner_tags"]):
@@ -94,65 +84,70 @@ class NERProcessor(object):
         return tokenized_inputs
 
 
-def duplicate_seq(features):
-    tokens = [x + x for x in features["tokens"]]
-    tags = [x + x for x in features["ner_tags"]]
+def duplicate_seq(features, k=2):
+    tokens = [k * x for x in features["tokens"]]
+    tags = [k * x for x in features["ner_tags"]]
 
     return {"id": [str(i) for i in range(len(tokens))],
             "tokens": tokens,
             "ner_tags": tags}
 
 
-def concatenate_seq(features, ratio=0.5):
-    indices = [i for i in range(len(features["id"]))]
-    n = int(ratio * len(indices))
-    to_concat = random.sample(indices, n) if ratio < 1.0 else indices
-    chunk_size = 5
-    rest_idx = [a for a in indices if a not in to_concat]
-    tokens = [x for x in list(itemgetter(*rest_idx)(features["tokens"]))]
-    tags = [x for x in list(itemgetter(*rest_idx)(features["ner_tags"]))]
-    for i in range(0, len(to_concat), chunk_size):
-        concat_ids = to_concat[i:i + chunk_size]
-        if len(concat_ids) > 1:
-            tokens.append(
-                [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["tokens"])))])
-            tags.append(
-                [x for x in
-                 itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["ner_tags"])))])
-        else:
-            tokens.append(
-                [x for x in list(itemgetter(*concat_ids)(features["tokens"]))])
-            tags.append(
-                [x for x in list(itemgetter(*concat_ids)(features["ner_tags"]))])
+def concatenate_seq(features, length=None):
+    # TODO update this method to concatenate up to max_length
+    # indices = [i for i in range(len(features["id"]))]
+    # n = int(ratio * len(indices))
+    # to_concat = random.sample(indices, n) if ratio < 1.0 else indices
+    # chunk_size = 5
+    # rest_idx = [a for a in indices if a not in to_concat]
+    # tokens = [x for x in list(itemgetter(*rest_idx)(features["tokens"]))]
+    # tags = [x for x in list(itemgetter(*rest_idx)(features["ner_tags"]))]
+    # for i in range(0, len(to_concat), chunk_size):
+    #     concat_ids = to_concat[i:i + chunk_size]
+    #     if len(concat_ids) > 1:
+    #         tokens.append(
+    #             [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["tokens"])))])
+    #         tags.append(
+    #             [x for x in
+    #              itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["ner_tags"])))])
+    #     else:
+    #         tokens.append(
+    #             [x for x in list(itemgetter(*concat_ids)(features["tokens"]))])
+    #         tags.append(
+    #             [x for x in list(itemgetter(*concat_ids)(features["ner_tags"]))])
+    #
+    # return {"id": [str(i) for i in range(len(tokens))],
+    #         "tokens": tokens,
+    #         "ner_tags": tags}
+    return {}
 
-    return {"id": [str(i) for i in range(len(tokens))],
-            "tokens": tokens,
-            "ner_tags": tags}
 
-
-def process_batch(examples, ratio=0.5, shuffle="false", concat="false", concat_method="duplicate", split="train"):
+def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2):
     # ToDo concatenate test, and shuffle?
     features_ = examples.data
-    if concat != "false":
-        if concat == split or concat == "all":
-            # Concatenate sequences
-            if concat_method == "duplicate":
-                data = duplicate_seq(features_)
-            elif concat_method == "random":
-                data = concatenate_seq(features_, ratio=ratio)
-
-            examples.data = data
-
+    if concatenate:
+        # Concatenate sequences
+        data = concatenate_seq(features_, length=max_length)
+        examples.data = data
+    if duplicate:
+        data = duplicate_seq(features_, k=k)
+        examples.data = data
     return examples
 
 
 if __name__ == '__main__':
-    from dataset.ner_dataset import NERDataset, TruncateDataset
+    from dataset.ner_dataset import NERDataset
 
     checkpoint = "bert-base-uncased"
-    conll03 = NERDataset(dataset="conll03")
+    conll03 = NERDataset(dataset="conll03", debugging=True)
 
-    ner_processor = NERProcessor(pretrained_checkpoint=checkpoint)
+    ner_processor = NERProcessor(pretrained_checkpoint=checkpoint, max_length=512, kwargs={})
+
+    for k in range(1, 11):
+        test_dataset = conll03.dataset["test_"].map(ner_processor.tokenize_and_align_labels,
+                                                   fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
+                                                   batched=True)
+        print(test_dataset[0])
 
     tokenized_datasets = conll03.dataset.map(ner_processor.tokenize_and_align_labels, batched=True)
 
