@@ -48,25 +48,6 @@ class BertForNERTask(Trainer):
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
 
-        # # Dataset
-        # self.dataset = NERDataset(dataset=self.dataset_name, debugging=all_args.debugging)
-        # self.max_length = self.dataset.max_length[
-        #     self.seq_length] if all_args.max_length is None else all_args.max_length
-        # self.processor = NERProcessor(pretrained_checkpoint=self.model_path, max_length=self.max_length,
-        #                               kwargs=all_args)
-        #
-        # self.train_dataset = self.dataset.dataset["train"].map(self.processor.tokenize_and_align_labels,
-        #                                                        fn_kwargs={"split": "train",
-        #                                                                   "concatenate": self.concatenate},
-        #                                                        batched=True)
-        # self.eval_dataset = self.dataset.dataset["validation"].map(self.processor.tokenize_and_align_labels,
-        #                                                            fn_kwargs={"split": "validation"}, batched=True)
-        #
-        # self.test_dataset = self.dataset.dataset["test"].map(self.processor.tokenize_and_align_labels,
-        #                                                      fn_kwargs={"split": "test"}, batched=True)
-        # self.shuffled_test = self.dataset.dataset["shuffled_test"].map(self.processor.tokenize_and_align_labels,
-        #                                                                fn_kwargs={"split": "shuffled_test"},
-        #                                                                batched=True)
         self.dataset = dataset
         self.processor = processor
         self.collate_fn = DataCollator(tokenizer=processor.tokenizer, max_length=self.max_length,

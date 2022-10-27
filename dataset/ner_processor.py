@@ -90,7 +90,9 @@ def duplicate_seq(features, k=2):
 
     return {"id": [str(i) for i in range(len(tokens))],
             "tokens": tokens,
-            "ner_tags": tags}
+            "ner_tags": tags,
+            "original_tokens": features["tokens"],
+            "original_tags": features["ner_tags"]}
 
 
 def concatenate_seq(features, length=None):
