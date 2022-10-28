@@ -156,7 +156,7 @@ def _find_class_pos(labels, class_label):
     return inds
 
 
-def compute_ner_pos_f1(p, label_list,k):
+def compute_ner_pos_f1(p, label_list):
     predictions_scores, labels, inputs = p
     predictions = np.argmax(predictions_scores, axis=2)
 
