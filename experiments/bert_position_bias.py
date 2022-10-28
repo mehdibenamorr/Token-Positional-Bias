@@ -127,9 +127,9 @@ class BertForNERTask(Trainer):
              k: Optional[int] = None,
              metric_key_prefix: str = "test",
              ) -> Dict[str, float]:
-        self.compute_metrics = lambda p: compute_ner_pos_f1(p=p,
-                                                            label_list=self.dataset.labels,
-                                                            k=1)
+        # self.compute_metrics = lambda p: compute_ner_pos_f1(p=p,
+        #                                                     label_list=self.dataset.labels,
+        #                                                     k=1)
         return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def log_pos_losses(self):
