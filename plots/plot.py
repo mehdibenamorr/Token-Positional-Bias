@@ -4,7 +4,7 @@ import matplotlib
 import pandas as pd
 import wandb
 
-from dataset.ner_dataset import NERDataset
+from dataset.ner_dataset import NERDataset, NERDatasetbuilder
 
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -126,10 +126,13 @@ def dataset_plot():
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
     f.savefig(plots_path + 'ontonotes.pdf')
-def bias_experiment(experiment="bert-position-bias-conll03", dataset="conll03"):
-    NERDataset(dataset=dataset)
-    entity = "mehdi-benamor-uni-passau-de"  # set to your entity and project
-    runs = api.runs(entity + "/" + experiment)
+
+
+def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonotes5"):
+    labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    labels = list(np.unique([l.split("-")[-1] for l in labels]))
+    entity = "benamor"  # set to your entity and project
+    runs = api.runs(entity + "/" + experiment + "-" + dataset)
 
 
     # Per Class distribution f1 score for max and min
@@ -144,24 +147,34 @@ def bias_experiment(experiment="bert-position-bias-conll03", dataset="conll03"):
         #  We call ._json_dict to omit large files
         if run.state == "finished":
             summary_list.append(run.summary._json_dict)
-            run.history()
-            # .config contains the hyperparameters.
-            #  We remove special values that start with _.
-            config_list.append(
-                {k: v for k, v in run.config.items()
-                 if not k.startswith('_')})
+            df = run.history()
+            dfs = []
+            for k in range(1,11):
+                df_ = run.history(keys=[ key for key in  df.keys() if key.startswith(f"test/k={k}_")])
+                df_.columns = [col.split(f"={k}_")[-1] for col in df_.columns]
+                df_["k"] = k
+                dfs.append(df_)
 
-            # .name is the human-readable name of the run.
-            name_list.append(run.name)
+            results = pd.concat(dfs)
 
-    runs_df = pd.DataFrame({
-        "summary": summary_list,
-        "config": config_list,
-        "name": name_list
-    })
-
-    runs_df.to_csv("project.csv")
+            f, ax = plt.subplots(figsize=(3.54,2.65))
+            # Plot the orbital period with horizontal boxes
+            sns.lineplot(data=results, x="k", y="overall_f1",
+                         palette="Set2", markers=True)
+            # Tweak the visual presentation
+            ax.set(ylabel="F1", xlabel='k-factor')
+            f.savefig(plots_path + f'{dataset}_f1.jpg')
+            for cls in labels:
+                if cls != "O":
+                    f, ax = plt.subplots(figsize=(3.54,2.65))
+                    # Plot the orbital period with horizontal boxes
+                    sns.lineplot(data=results, x="k", y=f"{cls}.f1",
+                                 palette="Set2", markers=True)
+                    # Tweak the visual presentation
+                    ax.set(ylabel=f"F1({cls})", xlabel='k-factor')
+                    f.savefig(plots_path + f'{dataset}_{cls}_f1.jpg')
 
 
 if __name__ == "__main__":
-    dataset_plot()
+    # dataset_plot()
+    bias_experiment()
