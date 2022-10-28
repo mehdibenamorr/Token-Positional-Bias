@@ -14,6 +14,7 @@ MAX_EPOCH=5
 EVAL_STRATEGY=steps
 PADDING=longest
 PADDING_SIDE=right
+POS_EMB_TYPE=$2
 
 #Script ARGS
 EXPERIMENT=bert_position_bias_synthetic
@@ -45,6 +46,8 @@ python ${REPO}/experiments/bert_position_bias.py \
 --lr_scheduler_type ${LR_SCHEDULE} \
 --num_train_epochs ${MAX_EPOCH} \
 --evaluation_strategy ${EVAL_STRATEGY} \
+--position_embedding_type ${POS_EMB_TYPE} \
+--include_inputs_for_metrics \
 --duplicate \
 --truncation
 

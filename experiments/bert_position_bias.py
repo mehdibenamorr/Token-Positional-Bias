@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 from promise.dataloader import DataLoader
 from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
-from metrics.ner_f1 import compute_ner_pos_f1
+from metrics.ner_f1 import compute_ner_pos_f1, ner_span_metrics
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
 from datasets import Dataset
@@ -124,8 +124,12 @@ class BertForNERTask(Trainer):
     def test(self,
              test_dataset: Optional[Dataset] = None,
              ignore_keys: Optional[List[str]] = None,
-             metric_key_prefix: str = "eval",
+             k: Optional[int] = None,
+             metric_key_prefix: str = "test",
              ) -> Dict[str, float]:
+        self.compute_metrics = lambda p: compute_ner_pos_f1(p=p,
+                                                            label_list=self.dataset.labels,
+                                                            k=1)
         return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def log_pos_losses(self):
@@ -159,12 +163,13 @@ def main():
     experiment_name = f"{args.experiment}-{args.dataset}"
     tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
             f"padding={args.padding}", f"seed={training_args.seed}",
-            f"padding_side={args.padding_side}"]
+            f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}"]
     for i in range(args.nbruns):
         config = vars(args)
-        wandb.init(project=experiment_name, name=f"{args.dataset}," + ",".join(
-            [f"max_length={args.max_length}", f"padding={args.padding}",
-             f"padding_side={args.padding_side}"]) + f",run:{i + 1}", tags=tags, config=config)
+        wandb.init(project=experiment_name, name=",".join(
+            [f"padding_side={args.padding_side}", f"duplicate={args.duplicate}",
+             f"pos_emb_type={args.position_embedding_type}"]) + f",i={i + 1}", tags=tags,
+                   config=config)
         print(f"Run number:{i + 1}")
 
         # Dataset
@@ -188,14 +193,14 @@ def main():
         if args.duplicate:
             for k in range(1, 11):
                 test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                           fn_kwargs={"duplicate": args.duplicate, "k": k},
-                                                           load_from_cache_file=False, batched=True)
+                                                            fn_kwargs={"duplicate": args.duplicate, "k": k},
+                                                            load_from_cache_file=False, batched=True)
 
-                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}")
+                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels, load_from_cache_file=False,
-                                                       batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test")
+                                                        batched=True)
+            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test", k=1)
 
         wandb.finish()
 

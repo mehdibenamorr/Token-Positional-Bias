@@ -16,7 +16,7 @@ def tags_to_spans(tokens, tags):
     """
     Desc:
         get from token_level labels to list of entities,
-        it doesnot matter tagging scheme is BMES or BIO or IOBES
+        it does not matter tagging scheme is BMES or BIO or IOBES
     Returns:
         a list of entities
         [[token1],[token2,token3],...],
