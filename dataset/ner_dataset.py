@@ -49,21 +49,22 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
                  train_file="train.word.iobes",
                  dev_file="dev.word.iobes",
                  test_file="test.word.iobes",
+                 all_file="all.word.iobes",
                  debugging=False,
-                 concat= "false",
                  **kwargs):
         self._ner_tags = self.get_labels(dataset)
         suffix_ = "_debug" if debugging else ""
-        suffix = "_concat" if concat=="true" else ""
-        self.BUILDER_CONFIGS = [NERDatasetConfig(name=dataset + suffix + suffix_, version=CONFIGS[dataset]["version"],
+        self.BUILDER_CONFIGS = [NERDatasetConfig(name=dataset + suffix_, version=CONFIGS[dataset]["version"],
                                                  description=CONFIGS[dataset]["description"])]
         self._url = URLS[dataset]
         self._train_file = train_file
-        self._train_file_shuffled = f"{train_file}.shuffled"
+        self._train_file_ = f"{train_file}.cut"
         self._dev_file = dev_file
-        self._dev_file_shuffled = f"{dev_file}.shuffled"
+        self._dev_file_ = f"{dev_file}.cut"
         self._test_file = test_file
         self._test_file_shuffled = f"{test_file}.shuffled"
+        self._test_file_ = f"{test_file}.cut"
+        self._all_file = f"{all_file}.cut"
         self.debugging = debugging
         self.limit = 100
         super(NERDatasetbuilder, self).__init__(*args, cache_dir=cache_dir, **kwargs)
@@ -109,10 +110,12 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
         """Returns SplitGenerators."""
         urls_to_download = {
             "train": f"{self._url}{self._train_file}",
-            "train-shuffled": f"{self._url}{self._train_file_shuffled}",
+            "train*": f"{self._url}{self._train_file_}",
             "dev": f"{self._url}{self._dev_file}",
-            "dev-shuffled": f"{self._url}{self._dev_file_shuffled}",
+            "dev*": f"{self._url}{self._dev_file_}",
             "test": f"{self._url}{self._test_file}",
+            "test*": f"{self._url}{self._test_file_}",
+            "all*": f"{self._url}{self._all_file}",
             "test-shuffled": f"{self._url}{self._test_file_shuffled}",
         }
         downloaded_files = dl_manager.download_and_extract(urls_to_download)
@@ -121,10 +124,14 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": downloaded_files["train"]}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={"filepath": downloaded_files["dev"]}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": downloaded_files["test"]}),
-            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_train"),
-                                    gen_kwargs={"filepath": downloaded_files["train-shuffled"]}),
-            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_validation"),
-                                    gen_kwargs={"filepath": downloaded_files["dev-shuffled"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="train_"),
+                                    gen_kwargs={"filepath": downloaded_files["train*"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="dev_"),
+                                    gen_kwargs={"filepath": downloaded_files["dev*"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="test_"),
+                                    gen_kwargs={"filepath": downloaded_files["test*"]}),
+            datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="all_"),
+                                    gen_kwargs={"filepath": downloaded_files["all*"]}),
             datasets.SplitGenerator(name=datasets.Split.__new__(datasets.Split, name="shuffled_test"),
                                     gen_kwargs={"filepath": downloaded_files["test-shuffled"]}),
         ]
@@ -166,16 +173,16 @@ class NERDataset(object):
     """
     NAME = "NERDataset"
 
-    def __init__(self, dataset="conll03", debugging=False, concat="false"):
+    def __init__(self, dataset="conll03", debugging=False):
         cache_dir = os.path.join(str(Path.home()), '.ner_datasets')
         print("Cache directory: ", cache_dir)
         os.makedirs(cache_dir, exist_ok=True)
         download_config = DownloadConfig(cache_dir=cache_dir)
-        self._dataset = NERDatasetbuilder(cache_dir=cache_dir, dataset=dataset, debugging=debugging, concat=concat)
+        self._dataset = NERDatasetbuilder(cache_dir=cache_dir, dataset=dataset, debugging=debugging)
         print("Cache1 directory: ", self._dataset.cache_dir)
         self._dataset.download_and_prepare(download_config=download_config)
         self._dataset = self._dataset.as_dataset()
-        self.max_length = self.seq_length()
+        self.sequence_lengths = self.seq_length()
 
     @property
     def dataset(self):
@@ -185,8 +192,7 @@ class NERDataset(object):
         train = [len(a["tokens"]) for a in self.dataset["train"]]
         dev = [len(a["tokens"]) for a in self.dataset["validation"]]
         test = [len(a["tokens"]) for a in self.dataset["test"]]
-        self.sequence_lengths = train + dev + test
-        return {"max": max(self.sequence_lengths)+2, "median": int(np.median(self.sequence_lengths))+2, "min": min(self.sequence_lengths)+2}
+        return train + dev + test
 
     @property
     def labels(self) -> ClassLabel:
@@ -203,20 +209,26 @@ class NERDataset(object):
     def train(self):
         return self._dataset['train']
 
-    def train_shuffled(self):
-        return self._dataset['shuffled-train']
+    def train_(self):
+        return self._dataset['train_']
 
     def test(self):
         return self._dataset["test"]
+
+    def test_(self):
+        return self._dataset["test_"]
 
     def test_shuffled(self):
         return self._dataset["shuffled_test"]
 
     def validation(self):
-        return self._dataset["validation"]
+        return self._dataset["dev"]
 
-    def validation_shuffled(self):
-        return self._dataset["shuffled_validation"]
+    def validation_(self):
+        return self._dataset["dev_"]
+
+    def data(self):
+        return self._dataset["all_"]
 
 
 from torch.utils.data import Dataset
