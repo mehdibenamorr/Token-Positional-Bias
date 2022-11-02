@@ -125,7 +125,7 @@ def concatenate_seq(features, length=None):
 
 
 def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2):
-    # ToDo concatenate test, and shuffle?
+    # ToDo concatenate test, and permutate random words?
     features_ = examples.data
     if concatenate:
         # Concatenate sequences

@@ -12,15 +12,15 @@ LR_SCHEDULE=linear
 LR=5e-5
 MAX_EPOCH=5
 EVAL_STRATEGY=steps
-PADDING=longest
+PADDING=max_length
 PADDING_SIDE=right
-POS_EMB_TYPE=$2
+POS_EMB_TYPE=absolute
 
 #Script ARGS
-EXPERIMENT=bert_position_bias_synthetic
+EXPERIMENT=bert_position_bias_no_cv
 MODEL=bert-base-uncased
 DATASET=$1
-NBRUNS=1
+NBRUNS=5
 
 
 

@@ -67,8 +67,7 @@ def plot_pos_dist(data):
 def plot_loss_dist(data):
     f, ax = plt.subplots(figsize=(7.25, 5.43))
     # Plot the orbital period with horizontal boxes
-    sns.boxplot(data=data, x="position", y="loss",
-                width=.4, palette="Set2", whis=[0, 100])
+    sns.displot(data=data, x="position", y="loss", kind="kde")
     # Tweak the visual presentation
     ax.set(ylabel="Loss", xlabel='positions')
 

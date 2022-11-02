@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # file: bert_position_bias.py
 #
+from torch.utils.data import DataLoader
 
 from utils import set_random_seed
 
@@ -20,7 +21,6 @@ from dataset.ner_processor import NERProcessor
 from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
-from promise.dataloader import DataLoader
 from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
 from metrics.ner_f1 import compute_ner_pos_f1, ner_span_metrics
 from transformers import Trainer, TrainingArguments
@@ -113,11 +113,10 @@ class BertForNERTask(Trainer):
                 if table:
                     wandb.log({f'{l}.positions_distribution': wandb.plot.histogram(table, "positions",
                                                                                    title=f'{l}.positions_distribution')})
-        # pr_curve = metrics.pop(f"{metric_key_prefix}_pr", None)
-        # roc_curve = metrics.pop(f"{metric_key_prefix}_roc", None)
         pos_dist = metrics.pop(f"{metric_key_prefix}_pos_dist", None)
-        wandb.log({
-            f"{metric_key_prefix}_pos_dist": wandb.Image(pos_dist)})
+        if pos_dist is not None:
+            wandb.log({
+                f"{metric_key_prefix}_pos_dist": wandb.Image(pos_dist)})
         return EvalLoopOutput(predictions=eval_output.predictions, label_ids=eval_output.label_ids, metrics=metrics,
                               num_samples=eval_output.num_samples)
 
@@ -127,9 +126,11 @@ class BertForNERTask(Trainer):
              k: Optional[int] = None,
              metric_key_prefix: str = "test",
              ) -> Dict[str, float]:
-        # self.compute_metrics = lambda p: compute_ner_pos_f1(p=p,
-        #                                                     label_list=self.dataset.labels,
-        #                                                     k=1)
+        self.compute_metrics = lambda p: ner_span_metrics(all_preds_scores=p.predictions,
+                                                          all_labels=p.label_ids,
+                                                          all_inputs=p.inputs,
+                                                          label_list=self.dataset.labels,
+                                                          k=k)
         return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def log_pos_losses(self):
@@ -140,7 +141,7 @@ class BertForNERTask(Trainer):
                                                            self.max_length).detach().cpu().numpy()
         data = []
         for k in range(train_losses.shape[1]):
-            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss != 0]
+            data += [(loss, k) for loss in train_losses[:, k].tolist() if loss != 0]
         train_ = pd.DataFrame(data=data, columns=["loss", "position"])
         # table = wandb.Table(dataframe=train_) "train_loss/pos": table,
         f = plot_loss_dist(train_)
@@ -148,7 +149,7 @@ class BertForNERTask(Trainer):
 
         data = []
         for k in range(dev_losses.shape[1]):
-            data += [(loss, str(k)) for loss in train_losses[:, k].tolist() if loss != 0]
+            data += [(loss, k) for loss in train_losses[:, k].tolist() if loss != 0]
         eval_ = pd.DataFrame(data=data, columns=["loss", "position"])
         f = plot_loss_dist(eval_)
         # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
@@ -163,12 +164,11 @@ def main():
     experiment_name = f"{args.experiment}-{args.dataset}"
     tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
             f"padding={args.padding}", f"seed={training_args.seed}",
-            f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}"]
+            f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}",
+            f"duplicate={args.duplicate}"]
     for i in range(args.nbruns):
         config = vars(args)
-        wandb.init(project=experiment_name, name=",".join(
-            [f"padding_side={args.padding_side}", f"duplicate={args.duplicate}",
-             f"pos_emb_type={args.position_embedding_type}"]) + f",i={i + 1}", tags=tags,
+        wandb.init(project=experiment_name, name=f"run={i + 1}", tags=tags,
                    config=config)
         print(f"Run number:{i + 1}")
 
@@ -185,10 +185,10 @@ def main():
         task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
                                       eval=eval_dataset, dataset=dataset, processor=processor)
         task_trainer.train()
+        #
+        # task_trainer.evaluate()
 
-        task_trainer.evaluate()
-
-        # task_trainer.log_pos_losses()
+        task_trainer.log_pos_losses()
 
         if args.duplicate:
             for k in range(1, 11):
@@ -198,9 +198,11 @@ def main():
 
                 task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
-            test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels, load_from_cache_file=False,
+            test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
+                                                        fn_kwargs={"duplicate": True, "k": 1},
+                                                        load_from_cache_file=False,
                                                         batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test", k=1)
+            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
 
         wandb.finish()
 
