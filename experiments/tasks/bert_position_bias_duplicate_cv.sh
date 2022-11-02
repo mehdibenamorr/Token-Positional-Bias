@@ -30,7 +30,7 @@ REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
 
 
-python ${REPO}/experiments/bert_position_bias.py \
+python ${REPO}/experiments/bert_position_bias_cv.py \
 --output_dir=${OUTPUT_DIR} \
 --dataset=${DATASET} \
 --experiment=${EXPERIMENT} \
