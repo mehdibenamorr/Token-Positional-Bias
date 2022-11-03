@@ -12,12 +12,13 @@ import os
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
+from sklearn.model_selection import KFold
 import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-
 # os.environ['WANDB_DISABLED'] = "true"
+
 
 def main():
     parser = get_parser()
@@ -31,43 +32,50 @@ def main():
             f"duplicate={args.duplicate}"]
     for i in range(args.nbruns):
         config = vars(args)
-        wandb.init(project=experiment_name, name=f"run={i + 1}", tags=tags,
-                   config=config)
-        print(f"Run number:{i + 1}")
-
-        # Dataset
+        # CV with 10-fold (k=10)
         dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
         processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
                                  kwargs=config)
 
-        train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
+        all_data = dataset.dataset["all_"]
+
+        kf = KFold(n_splits=args.cv)
+        for cv, (train_idx, test_idx) in enumerate(kf.split(all_data)):
+            print(f"CVFold={cv + 1}")
+            # Run by cv
+            wandb.init(project=experiment_name, name=f"CVFold={cv + 1}", tags=tags,
+                       config=config)
+            train_dataset = all_data.select(train_idx)
+            train_eval_data = train_dataset.train_test_split(seed=training_args.seed, load_from_cache_file=False,
+                                                             test_size=0.15)
+            train_dataset = train_eval_data["train"].map(processor.tokenize_and_align_labels,
                                                       fn_kwargs={"concatenate": args.concatenate},
                                                       batched=True)
-        eval_dataset = dataset.dataset["dev_"].map(processor.tokenize_and_align_labels, batched=True)
+            eval_dataset = train_eval_data["test"].map(processor.tokenize_and_align_labels, batched=True)
+            test_dataset = all_data.select(test_idx)
 
-        task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
-                                      eval=eval_dataset, dataset=dataset, processor=processor)
-        task_trainer.train()
-        #
-        # task_trainer.evaluate()
+            task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
+                                          eval=eval_dataset, dataset=dataset, processor=processor)
+            task_trainer.train()
 
-        task_trainer.log_pos_losses()
+            task_trainer.log_pos_losses()
 
-        if args.duplicate:
-            for k in range(1, 11):
-                test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                            fn_kwargs={"duplicate": args.duplicate, "k": k},
-                                                            load_from_cache_file=False, batched=True)
+            if args.duplicate:
+                for k in range(1, 3):
+                    test_dataset = test_dataset.map(processor.tokenize_and_align_labels,
+                                                    fn_kwargs={"duplicate": args.duplicate, "k": k},
+                                                    load_from_cache_file=False, batched=True)
 
-                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
-        else:
-            test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 1},
-                                                        load_from_cache_file=False,
-                                                        batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+                    task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
+            else:
+                test_dataset = test_dataset.map(processor.tokenize_and_align_labels,
+                                                fn_kwargs={"duplicate": True, "k": 1},
+                                                load_from_cache_file=False,
+                                                batched=True)
+                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=1", k=1)
 
-        wandb.finish()
+            wandb.finish()
+            del task_trainer
 
 
 if __name__ == "__main__":

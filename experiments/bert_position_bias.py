@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # file: bert_position_bias.py
 #
-from torch.utils.data import DataLoader
+
 
 from utils import set_random_seed
 
@@ -25,6 +25,7 @@ from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
 from metrics.ner_f1 import compute_ner_pos_f1, ner_span_metrics
 from transformers import Trainer, TrainingArguments
 from pathlib import Path
+from torch.utils.data import DataLoader
 from datasets import Dataset
 import wandb
 

@@ -50,6 +50,7 @@ def get_parser() -> argparse.ArgumentParser:
                         help="The padding strategy to be used. 'random' means pad tokens will be injected within "
                              "original sequence in random positions")
     parser.add_argument('--nbruns', default=10, type=int, help='Number of epochs during training')
+    parser.add_argument('--cv', default=10, type=int, help='Number fold in k-fold cross validation')
     parser.add_argument('--concatenate', action="store_true",
                         help='If set, sequences are concatenated in batches to max_length',
                         )
