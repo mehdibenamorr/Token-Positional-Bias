@@ -31,7 +31,7 @@ import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-# os.environ['WANDB_DISABLED'] = "true"
+os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNERTask(Trainer):
@@ -195,21 +195,26 @@ def main():
 
         task_trainer.log_pos_losses()
 
-        if args.duplicate:
-            for k in range(1, 11):
-                test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                            fn_kwargs={"duplicate": args.duplicate, "k": k},
-                                                            load_from_cache_file=False, batched=True)
-
-                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
-        else:
-            test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 1},
-                                                        load_from_cache_file=False,
-                                                        batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+        # if args.duplicate:
+        #     for k in range(1, 11):
+        #         test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
+        #                                                     fn_kwargs={"duplicate": args.duplicate, "k": k},
+        #                                                     load_from_cache_file=False, batched=True)
+        #
+        #         task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
+        # else:
+        #     test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
+        #                                                 fn_kwargs={"duplicate": True, "k": 1},
+        #                                                 load_from_cache_file=False,
+        #                                                 batched=True)
+        #     task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
 
         wandb.finish()
+        task_trainer = None
+        import gc
+        gc.collect()
+        with torch.no_grad():
+            torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

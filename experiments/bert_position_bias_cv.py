@@ -14,6 +14,7 @@ from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
 from sklearn.model_selection import KFold
 import wandb
+import torch
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
@@ -75,7 +76,11 @@ def main():
                 task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=1", k=1)
 
             wandb.finish()
-            del task_trainer
+            task_trainer = None
+            import gc
+            gc.collect()
+            with torch.no_grad():
+                torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
