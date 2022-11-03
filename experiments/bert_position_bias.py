@@ -31,7 +31,7 @@ import wandb
 os.environ['WANDB_LOG_MODEL'] = "true"
 
 
-# os.environ['WANDB_DISABLED'] = "true"
+os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNERTask(Trainer):
@@ -137,8 +137,7 @@ class BertForNERTask(Trainer):
         ## Logging Loss per pos
         train_losses = padded_stack(self.losses["train"]).view(-1,
                                                                self.max_length).detach().cpu().numpy()
-        dev_losses = padded_stack(self.losses["dev"]).view(-1,
-                                                           self.max_length).detach().cpu().numpy()
+
         data = []
         for k in range(train_losses.shape[1]):
             data += [(loss, k) for loss in train_losses[:, k].tolist() if loss != 0]
@@ -146,14 +145,16 @@ class BertForNERTask(Trainer):
         # table = wandb.Table(dataframe=train_) "train_loss/pos": table,
         f = plot_loss_dist(train_)
         wandb.log({"train_loss_dist": wandb.Image(f)})
-
-        data = []
-        for k in range(dev_losses.shape[1]):
-            data += [(loss, k) for loss in train_losses[:, k].tolist() if loss != 0]
-        eval_ = pd.DataFrame(data=data, columns=["loss", "position"])
-        f = plot_loss_dist(eval_)
-        # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
-        wandb.log({"eval_loss_dist": wandb.Image(f)})
+        if self.losses["dev"]:
+            dev_losses = padded_stack(self.losses["dev"]).view(-1,
+                                                               self.max_length).detach().cpu().numpy()
+            data = []
+            for k in range(dev_losses.shape[1]):
+                data += [(loss, k) for loss in train_losses[:, k].tolist() if loss != 0]
+            eval_ = pd.DataFrame(data=data, columns=["loss", "position"])
+            f = plot_loss_dist(eval_)
+            # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
+            wandb.log({"eval_loss_dist": wandb.Image(f)})
 
 
 def main():
