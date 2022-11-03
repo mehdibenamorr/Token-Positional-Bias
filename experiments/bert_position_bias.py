@@ -30,8 +30,7 @@ import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-
-os.environ['WANDB_DISABLED'] = "true"
+# os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNERTask(Trainer):
@@ -69,13 +68,14 @@ class BertForNERTask(Trainer):
                                              **kwargs)
         self.loss_pos_fn = CrossEntropyLossPerPosition()
         self.losses = {"train": [], "dev": []}
+        self.is_in_eval = False
 
     def compute_loss(self, model, inputs, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
         labels = inputs["labels"]
         logits = outputs["logits"]
         loss_per_pos = self.loss_pos_fn(logits, labels)
-        if self.is_in_train:
+        if self.is_in_train and not self.is_in_eval:
             self.losses["train"].append(loss_per_pos)
         else:
             self.losses["dev"].append(loss_per_pos)
@@ -90,8 +90,11 @@ class BertForNERTask(Trainer):
             ignore_keys: Optional[List[str]] = None,
             metric_key_prefix: str = "eval",
     ) -> Dict[str, float]:
-        return super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys,
-                                metric_key_prefix=metric_key_prefix)
+        self.is_in_eval = True
+        out = super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys,
+                               metric_key_prefix=metric_key_prefix)
+        self.is_in_eval = False
+        return out
 
     def evaluation_loop(
             self,

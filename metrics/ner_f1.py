@@ -236,7 +236,7 @@ class Nereval(datasets.Metric):
         if consistency:
             return self._compute_consistency(predictions=predictions, references=references, suffix=suffix,
                                              scheme=scheme,
-                                             mode=mode, sample_weight=sample_weight, zero_division=zero_division, k=10)
+                                             mode=mode, sample_weight=sample_weight, zero_division=zero_division, k=k)
         else:
             return self._compute_overall(predictions=predictions, references=references, suffix=suffix, scheme=scheme,
                                          mode=mode, sample_weight=sample_weight, zero_division=zero_division)

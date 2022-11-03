@@ -11,7 +11,7 @@ OPTIMIZER=adamw_hf
 LR_SCHEDULE=linear
 LR=5e-5
 MAX_EPOCH=5
-EVAL_STRATEGY=steps
+EVAL_STRATEGY=epoch
 PADDING=max_length
 PADDING_SIDE=right
 POS_EMB_TYPE=absolute
@@ -46,6 +46,8 @@ python ${REPO}/experiments/bert_position_bias.py \
 --lr_scheduler_type ${LR_SCHEDULE} \
 --num_train_epochs ${MAX_EPOCH} \
 --evaluation_strategy ${EVAL_STRATEGY} \
+--save_strategy ${EVAL_STRATEGY} \
+--logging_strategy ${EVAL_STRATEGY} \
 --position_embedding_type ${POS_EMB_TYPE} \
 --include_inputs_for_metrics \
 --duplicate \
