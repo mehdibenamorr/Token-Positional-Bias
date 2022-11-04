@@ -31,7 +31,7 @@ import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-os.environ['WANDB_DISABLED'] = "true"
+# os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNERTask(Trainer):
@@ -193,7 +193,7 @@ def main():
         #
         # task_trainer.evaluate()
 
-        task_trainer.log_pos_losses()
+        # task_trainer.log_pos_losses()
 
         if args.duplicate:
             for k in range(1, 11):
