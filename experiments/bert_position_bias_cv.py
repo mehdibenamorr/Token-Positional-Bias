@@ -65,17 +65,17 @@ def main():
 
             if args.duplicate:
                 for k in range(1, 10):
-                    test_dataset = test_dataset.map(processor.tokenize_and_align_labels,
+                    test_dataset_ = test_dataset.map(processor.tokenize_and_align_labels,
                                                     fn_kwargs={"duplicate": args.duplicate, "k": k},
                                                     load_from_cache_file=False, batched=True)
 
-                    task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
+                    task_trainer.test(test_dataset=test_dataset_, metric_key_prefix=f"test_k={k}", k=k)
             else:
-                test_dataset = test_dataset.map(processor.tokenize_and_align_labels,
+                test_dataset_ = test_dataset.map(processor.tokenize_and_align_labels,
                                                 fn_kwargs={"duplicate": True, "k": 1},
                                                 load_from_cache_file=False,
                                                 batched=True)
-                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=1", k=1)
+                task_trainer.test(test_dataset=test_dataset_, metric_key_prefix=f"test_k=1", k=1)
 
             wandb.finish()
             task_trainer = None
