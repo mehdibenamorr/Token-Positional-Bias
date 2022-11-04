@@ -61,10 +61,10 @@ def main():
                                           eval=eval_dataset, dataset=dataset, processor=processor)
             task_trainer.train()
 
-            task_trainer.log_pos_losses()
+            # task_trainer.log_pos_losses()
 
             if args.duplicate:
-                for k in range(1, 3):
+                for k in range(1, 10):
                     test_dataset = test_dataset.map(processor.tokenize_and_align_labels,
                                                     fn_kwargs={"duplicate": args.duplicate, "k": k},
                                                     load_from_cache_file=False, batched=True)
