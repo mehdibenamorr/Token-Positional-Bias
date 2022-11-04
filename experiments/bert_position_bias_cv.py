@@ -18,6 +18,7 @@ import torch
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
+
 # os.environ['WANDB_DISABLED'] = "true"
 
 
@@ -50,9 +51,10 @@ def main():
             train_eval_data = train_dataset.train_test_split(seed=training_args.seed, load_from_cache_file=False,
                                                              test_size=0.15)
             train_dataset = train_eval_data["train"].map(processor.tokenize_and_align_labels,
-                                                      fn_kwargs={"concatenate": args.concatenate},
-                                                      batched=True)
-            eval_dataset = train_eval_data["test"].map(processor.tokenize_and_align_labels, batched=True)
+                                                         fn_kwargs={"concatenate": args.concatenate},
+                                                         batched=True, load_from_cache_file=False)
+            eval_dataset = train_eval_data["test"].map(processor.tokenize_and_align_labels, batched=True,
+                                                       load_from_cache_file=False)
             test_dataset = all_data.select(test_idx)
 
             task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
