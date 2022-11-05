@@ -28,7 +28,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from datasets import Dataset
 import wandb
-
+import matplotlib.pyplot as plt
 os.environ['WANDB_LOG_MODEL'] = "true"
 
 # os.environ['WANDB_DISABLED'] = "true"
@@ -121,7 +121,7 @@ class BertForNERTask(Trainer):
         if pos_dist is not None:
             wandb.log({
                 f"{metric_key_prefix}_pos_dist": wandb.Image(pos_dist)})
-            pos_dist.close()
+            plt.close(pos_dist)
         return EvalLoopOutput(predictions=eval_output.predictions, label_ids=eval_output.label_ids, metrics=metrics,
                               num_samples=eval_output.num_samples)
 
@@ -150,7 +150,7 @@ class BertForNERTask(Trainer):
         # table = wandb.Table(dataframe=train_) "train_loss/pos": table,
         f = plot_loss_dist(train_)
         wandb.log({"train_loss_dist": wandb.Image(f)})
-        f.close()
+        plt.close(f)
         if self.losses["dev"]:
             dev_losses = padded_stack(self.losses["dev"]).view(-1,
                                                                self.max_length).detach().cpu().numpy()
@@ -161,7 +161,7 @@ class BertForNERTask(Trainer):
             f = plot_loss_dist(eval_)
             # table = wandb.Table(dataframe=eval_) "eval_loss/pos": table,
             wandb.log({"eval_loss_dist": wandb.Image(f)})
-            f.close()
+            plt.close(f)
 
 
 def main():

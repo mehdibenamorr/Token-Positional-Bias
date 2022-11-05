@@ -43,7 +43,7 @@ from seqeval.metrics import classification_report, accuracy_score
 from seqeval.metrics.sequence_labeling import get_entities
 from seqeval.metrics.v1 import check_consistent_length
 
-from plots.plot import plot_pos_dist
+from plots.plot import plot_pos_dist, plt
 
 # metric = load_metric("seqeval")
 
@@ -331,10 +331,13 @@ def ner_span_metrics(all_preds_scores, all_labels, all_inputs, label_list, k):
             table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
             results[l].update({"positions_distribution": table})
     position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
-    f = plot_pos_dist(position_dist)
+    try:
+        f = plot_pos_dist(position_dist)
 
-    results.update({
-        "pos_dist": f})
+        results.update({
+            "pos_dist": f})
+    except Exception as e:
+        print(f"plot pos dist failed due to exception{e}")
 
     results_per_k = metric.compute(predictions=true_predictions, references=true_labels, consistency=True, k=k)
 
