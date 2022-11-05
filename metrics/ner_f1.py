@@ -280,10 +280,13 @@ def compute_ner_pos_f1(p, label_list):
             table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
             results[l].update({"positions_distribution": table})
     position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
-    f = plot_pos_dist(position_dist)
+    try:
+        f = plot_pos_dist(position_dist)
 
-    results.update({
-        "pos_dist": f})
+        results.update({
+            "pos_dist": f})
+    except Exception as e:
+        print(f"plot pos dist failed due to exception{e}")
 
     return results
 
