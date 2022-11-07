@@ -208,7 +208,7 @@ class Nereval(datasets.Metric):
             except AttributeError:
                 raise ValueError(f"Scheme should be one of [IOB1, IOB2, IOE1, IOE2, IOBES, BILOU], got {scheme}")
 
-        k_pred = np.array([_chunk_sequences(v, k) for v in predictions])
+        k_pred = np.array([_chunk_sequences(v, k) for v in predictions], dtype=object)
         references = [_chunk_sequences(v, k)[0] for v in references]
         results = dict()
         for i in range(k):

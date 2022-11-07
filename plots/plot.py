@@ -53,11 +53,12 @@ sns.set(context='paper', style='white', font_scale=1.5, color_codes=True, rc=sty
 sns.set_theme(style="ticks")
 plots_path = 'plots/files/'
 
+
 def plot_pos_dist(data):
     f, ax = plt.subplots(figsize=(7.25, 5.43))
     # Plot the orbital period with horizontal boxes
     sns.boxplot(data=data, x="position", y="class",
-                width=.4, palette="Set2", hue="f1",whis=[0, 100], ax=ax)
+                width=.4, palette="Set2", hue="f1", whis=[0, 100], ax=ax)
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
 
@@ -72,6 +73,8 @@ def plot_loss_dist(data):
     ax.set(ylabel="Loss", xlabel='positions')
 
     return f
+
+
 # Datasets
 def dataset_plot():
     conll03 = NERDataset(dataset="conll03")
@@ -106,7 +109,7 @@ def dataset_plot():
         dfs += [(x, cls) for x in pos]
     dff = pd.DataFrame(dfs, columns=["position", "class"])
 
-    f, ax = plt.subplots(figsize=(3.54,2.65))
+    f, ax = plt.subplots(figsize=(3.54, 2.65))
     # Plot the orbital period with horizontal boxes
     sns.boxplot(data=dff, x="position", y="class",
                 width=.4, palette="Set2", whis=[0, 100])
@@ -114,8 +117,7 @@ def dataset_plot():
     ax.set(ylabel="", xlabel='Positions')
     f.savefig(plots_path + 'conll03.pdf')
 
-
-    #Ontonotes
+    # Ontonotes
 
     train2 = ontonotes5.train()
     classes = ['PERSON', 'GPE',
@@ -135,7 +137,7 @@ def dataset_plot():
     dfs = []
     for cls, pos in pos_dist2.items():
         dfs += [(x, cls) for x in pos]
-    dff = pd.DataFrame(dfs, columns=["position","class"])
+    dff = pd.DataFrame(dfs, columns=["position", "class"])
 
     f, ax = plt.subplots(figsize=(7.25, 5.43))
     # Plot the orbital period with horizontal boxes
@@ -152,7 +154,6 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
     entity = "benamor"  # set to your entity and project
     runs = api.runs(entity + "/" + experiment + "-" + dataset)
 
-
     # Per Class distribution f1 score for max and min
     # api.runs(
     #     path="my_entity/my_project",
@@ -167,15 +168,15 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
             summary_list.append(run.summary._json_dict)
             df = run.history()
             dfs = []
-            for k in range(1,11):
-                df_ = run.history(keys=[ key for key in  df.keys() if key.startswith(f"test/k={k}_")])
+            for k in range(1, 11):
+                df_ = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
                 df_.columns = [col.split(f"={k}_")[-1] for col in df_.columns]
                 df_["k"] = k
                 dfs.append(df_)
 
             results = pd.concat(dfs)
 
-            f, ax = plt.subplots(figsize=(3.54,2.65))
+            f, ax = plt.subplots(figsize=(3.54, 2.65))
             # Plot the orbital period with horizontal boxes
             sns.lineplot(data=results, x="k", y="overall_f1",
                          palette="Set2", markers=True)
@@ -184,7 +185,52 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
             f.savefig(plots_path + f'{dataset}_f1.jpg')
             for cls in labels:
                 if cls != "O":
-                    f, ax = plt.subplots(figsize=(3.54,2.65))
+                    f, ax = plt.subplots(figsize=(3.54, 2.65))
+                    # Plot the orbital period with horizontal boxes
+                    sns.lineplot(data=results, x="k", y=f"{cls}.f1",
+                                 palette="Set2", markers=True)
+                    # Tweak the visual presentation
+                    ax.set(ylabel=f"F1({cls})", xlabel='k-factor')
+                    f.savefig(plots_path + f'{dataset}_{cls}_f1.jpg')
+
+
+def bias_experiment_k(dataset="conll03"):
+    experiment = "bert_position_bias_no_cv"
+    labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    labels = list(np.unique([l.split("-")[-1] for l in labels]))
+    entity = "benamor"  # set to your entity and project
+    runs = api.runs(entity + "/" + experiment + "-" + dataset)
+
+    summary_list, config_list, name_list = [], [], []
+    for run in runs:
+        # .summary contains the output keys/values for metrics like accuracy.
+        #  We call ._json_dict to omit large files
+        if run.state == "finished":
+            summary_list.append(run.summary._json_dict)
+            df = run.history()
+            dfs = []
+            for k in range(1, 11):
+                df_ = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
+                df_.columns = [col.split(f"={k}_")[-1] for col in df_.columns]
+                df_["k"] = k
+                overall_ = df_.drop([key for key in df_.keys() if key.startswith(f"k=")], axis=1)
+                df_k = df_.drop([key for key in df_.keys() if not key.startswith(f"k={k}")], axis=1)
+                for j in range(k,11):
+                    df_k_j = df_k.drop([key for key in df_k.keys() if not key.startswith(f"k=")], axis=1)
+                dfs.append(df_)
+
+            results = pd.concat(dfs)
+
+            f, ax = plt.subplots(figsize=(3.54, 2.65))
+            # Plot the orbital period with horizontal boxes
+            sns.lineplot(data=results, x="k", y="overall_f1",
+                         palette="Set2", markers=True)
+            # Tweak the visual presentation
+            ax.set(ylabel="F1", xlabel='k-factor')
+            f.savefig(plots_path + f'{dataset}_f1.jpg')
+            for cls in labels:
+                if cls != "O":
+                    f, ax = plt.subplots(figsize=(3.54, 2.65))
                     # Plot the orbital period with horizontal boxes
                     sns.lineplot(data=results, x="k", y=f"{cls}.f1",
                                  palette="Set2", markers=True)
@@ -195,4 +241,5 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
 
 if __name__ == "__main__":
     # dataset_plot()
-    bias_experiment()
+    # bias_experiment()
+    bias_experiment_k(dataset="conll03")
