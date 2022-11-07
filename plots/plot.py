@@ -202,22 +202,38 @@ def bias_experiment_k(dataset="conll03"):
     runs = api.runs(entity + "/" + experiment + "-" + dataset)
 
     summary_list, config_list, name_list = [], [], []
+    runs_dfs = []
     for run in runs:
         # .summary contains the output keys/values for metrics like accuracy.
         #  We call ._json_dict to omit large files
         if run.state == "finished":
             summary_list.append(run.summary._json_dict)
             df = run.history()
-            dfs = []
+            results = dict()
             for k in range(1, 11):
-                df_ = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
-                df_.columns = [col.split(f"={k}_")[-1] for col in df_.columns]
-                df_["k"] = k
-                overall_ = df_.drop([key for key in df_.keys() if key.startswith(f"k=")], axis=1)
-                df_k = df_.drop([key for key in df_.keys() if not key.startswith(f"k={k}")], axis=1)
-                for j in range(k,11):
-                    df_k_j = df_k.drop([key for key in df_k.keys() if not key.startswith(f"k=")], axis=1)
-                dfs.append(df_)
+                # k: duplication factor
+                test_metrics_k = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
+                test_metrics_k.columns = [col.split(f"={k}_")[-1] for col in test_metrics_k.columns]
+                # test_metrics_k["k"] = k
+                overall_batch = test_metrics_k[[key for key in test_metrics_k.keys() if not key.startswith(f"k={k}")]]
+                batch_splits = []
+                for i in range(1,k+1):
+                    overall_batch_i = test_metrics_k[[key for key in test_metrics_k.keys() if key.startswith(f"k={i}") and not key.startswith(f"k={i}.k=")]]
+                    overall_batch_i.columns = [col.split(f"={i}.")[-1] for col in overall_batch_i.columns]
+                    consistency_batch_i = test_metrics_k[[key for key in test_metrics_k.keys() if key.startswith(f"k={i}.k=")]]
+                    consistency_batch_i_ = []
+                    for j in range(i,k+1):
+                        consistency_batch_i_j = consistency_batch_i[[key for key in consistency_batch_i.keys() if key.startswith(f"k={i}.k={j}")]]
+                        consistency_batch_i_j.columns = [col.split(f"k={i}.k={j}.")[-1] for col in consistency_batch_i_j.columns]
+                        consistency_batch_i_j["batch_comp"] = j
+                        consistency_batch_i_.append(consistency_batch_i_j)
+                    consistency_batch_i = pd.concat(consistency_batch_i_)
+                    overall_batch_i = pd.concat([overall_batch_i, consistency_batch_i], axis=1)
+                    overall_batch_i["batch_pos"] = i
+                    batch_splits.append(overall_batch_i)
+                overall_batch_ = pd.concat([overall_batch] + batch_splits, axis=1)
+                overall_batch_["k"] = k
+                # dfs.append(df_)
 
             results = pd.concat(dfs)
 
