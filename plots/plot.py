@@ -1,16 +1,11 @@
-import pandas as pd
+# matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib
 import pandas as pd
+import seaborn as sns
 import wandb
 
 from dataset.ner_dataset import NERDataset, NERDatasetbuilder
-
-# matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
-from scipy.stats import spearmanr
-import seaborn as sns
-from scipy.stats import norm
 
 api = wandb.Api()
 
@@ -209,50 +204,123 @@ def bias_experiment_k(dataset="conll03"):
         if run.state == "finished":
             summary_list.append(run.summary._json_dict)
             df = run.history()
-            results = dict()
+            dfs = []
             for k in range(1, 11):
                 # k: duplication factor
                 test_metrics_k = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
                 test_metrics_k.columns = [col.split(f"={k}_")[-1] for col in test_metrics_k.columns]
                 # test_metrics_k["k"] = k
-                overall_batch = test_metrics_k[[key for key in test_metrics_k.keys() if not key.startswith(f"k={k}")]]
+                overall_batch = test_metrics_k.loc[:,
+                                [key for key in test_metrics_k.keys() if not key.startswith(f"k=")]]
+                overall_batch["batch_pos"] = 0
+                overall_batch["batch_comp"] = 0
                 batch_splits = []
-                for i in range(1,k+1):
-                    overall_batch_i = test_metrics_k[[key for key in test_metrics_k.keys() if key.startswith(f"k={i}") and not key.startswith(f"k={i}.k=")]]
+                for i in range(1, k + 1):
+                    overall_batch_i = test_metrics_k.loc[:, [key for key in test_metrics_k.keys() if
+                                                             key.startswith(f"k={i}.") and not key.startswith(
+                                                                 f"k={i}.k=")]]
                     overall_batch_i.columns = [col.split(f"={i}.")[-1] for col in overall_batch_i.columns]
-                    consistency_batch_i = test_metrics_k[[key for key in test_metrics_k.keys() if key.startswith(f"k={i}.k=")]]
+                    consistency_batch_i = test_metrics_k.loc[:,
+                                          [key for key in test_metrics_k.keys() if key.startswith(f"k={i}.k=")]]
                     consistency_batch_i_ = []
-                    for j in range(i,k+1):
-                        consistency_batch_i_j = consistency_batch_i[[key for key in consistency_batch_i.keys() if key.startswith(f"k={i}.k={j}")]]
-                        consistency_batch_i_j.columns = [col.split(f"k={i}.k={j}.")[-1] for col in consistency_batch_i_j.columns]
+                    for j in range(i, k + 1):
+                        consistency_batch_i_j = consistency_batch_i.loc[:, [key for key in consistency_batch_i.keys() if
+                                                                            key.startswith(f"k={i}.k={j}.")]]
+                        consistency_batch_i_j.columns = [col.split(f"k={i}.k={j}.")[-1] for col in
+                                                         consistency_batch_i_j.columns]
                         consistency_batch_i_j["batch_comp"] = j
                         consistency_batch_i_.append(consistency_batch_i_j)
                     consistency_batch_i = pd.concat(consistency_batch_i_)
+                    consistency_batch_i.dtype = int
                     overall_batch_i = pd.concat([overall_batch_i, consistency_batch_i], axis=1)
                     overall_batch_i["batch_pos"] = i
                     batch_splits.append(overall_batch_i)
-                overall_batch_ = pd.concat([overall_batch] + batch_splits, axis=1)
+                overall_batch_ = pd.concat([overall_batch] + batch_splits)
                 overall_batch_["k"] = k
-                # dfs.append(df_)
+                dfs.append(overall_batch_)
+            run_results = pd.concat(dfs)
+            run_results["run"] = run.name
+            runs_dfs.append(run_results)
+    df = pd.concat(runs_dfs)
+    df.to_csv(f"{experiment}-{dataset}.csv")
 
-            results = pd.concat(dfs)
+    # HeatMaps
+    ## Batch f1 per k
+    perf_batch_pos_mean = df.pivot_table(index="k", columns="batch_pos", values="overall_f1", aggfunc=np.mean)
+    matrix = perf_batch_pos_mean.iloc[:, 1:].values
+    upper_indices = np.triu_indices(matrix.shape[1])
+    matrix[upper_indices] = matrix.T[upper_indices]
+    perf_batch_pos_mean.iloc[:, 1:] = matrix
+    perf_batch_pos_std = df.pivot_table(index="k", columns="batch_pos", values="overall_f1", aggfunc=np.std)
+    matrix = perf_batch_pos_std.iloc[:, 1:].values
+    matrix[upper_indices] = matrix.T[upper_indices]
+    perf_batch_pos_std.iloc[:, 1:] = matrix
+    f, ax = plt.subplots(figsize=(5,3.75))
+    sns.heatmap(data=perf_batch_pos_mean * 100, annot=perf_batch_pos_std.values * 100, robust=True,
+                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
+    # locs, labels = plt.xticks()
+    # labels[0] = plt.Text(0.5, 0, "all")
+    # plt.xticks(locs, labels)
+    ax.set(xtickslabels=(["all"] + [str(i) for i in range(1, 11)]))
+    ax.set(ylabel="k-factor", xlabel='Batch Split')
+    f.savefig(plots_path + f'{dataset}_heatmap_batch_f1_pos.pdf')
 
-            f, ax = plt.subplots(figsize=(3.54, 2.65))
-            # Plot the orbital period with horizontal boxes
-            sns.lineplot(data=results, x="k", y="overall_f1",
-                         palette="Set2", markers=True)
-            # Tweak the visual presentation
-            ax.set(ylabel="F1", xlabel='k-factor')
-            f.savefig(plots_path + f'{dataset}_f1.jpg')
-            for cls in labels:
-                if cls != "O":
-                    f, ax = plt.subplots(figsize=(3.54, 2.65))
-                    # Plot the orbital period with horizontal boxes
-                    sns.lineplot(data=results, x="k", y=f"{cls}.f1",
-                                 palette="Set2", markers=True)
-                    # Tweak the visual presentation
-                    ax.set(ylabel=f"F1({cls})", xlabel='k-factor')
-                    f.savefig(plots_path + f'{dataset}_{cls}_f1.jpg')
+    ## Consistency ratio (Correct agreement / all agreement)
+    consistency_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values="consistency", aggfunc=np.mean)
+    matrix = consistency_batch_pos_mean.values
+    upper_indices = np.triu_indices(matrix.shape[1])
+    matrix[upper_indices] = matrix.T[upper_indices]
+    consistency_batch_pos_mean.iloc[:, :] = matrix
+    consistency_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values="consistency", aggfunc=np.std)
+    matrix = consistency_batch_pos_std.values
+    matrix[upper_indices] = matrix.T[upper_indices]
+    consistency_batch_pos_std.iloc[:, :] = matrix
+    f, ax = plt.subplots(figsize=(5, 3.75))
+    sns.heatmap(data=consistency_batch_pos_mean * 100, annot=consistency_batch_pos_std.values * 100, robust=True,
+                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
+    # locs, labels = plt.xticks()
+    # labels[0] = plt.Text(0.5, 0, "all")
+    # plt.xticks(locs, labels)
+    ax.set(ylabel="Batch(k) Split", xlabel='Batch(k) Split')
+    f.savefig(plots_path + f'{dataset}_heatmap_batch_consistency_pos.pdf')
+
+    ## Correct agreements consistency
+    correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_correct", aggfunc=np.mean)
+    matrix = correct_batch_pos_mean.values
+    upper_indices = np.triu_indices(matrix.shape[1])
+    matrix[upper_indices] = matrix.T[upper_indices]
+    correct_batch_pos_mean.iloc[:, :] = matrix
+    correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_correct", aggfunc=np.std)
+    matrix = correct_batch_pos_std.values
+    matrix[upper_indices] = matrix.T[upper_indices]
+    correct_batch_pos_std.iloc[:, :] = matrix
+    f, ax = plt.subplots(figsize=(5, 3.75))
+    sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values , robust=True,
+                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
+    # locs, labels = plt.xticks()
+    # labels[0] = plt.Text(0.5, 0, "all")
+    # plt.xticks(locs, labels)
+    ax.set(ylabel="Batch(k) Split", xlabel='Batch(k) Split')
+    f.savefig(plots_path + f'{dataset}_heatmap_batch_correct_pos.pdf')
+
+    # Line Plots
+    ## F1 performance of all classes per
+    # f, ax = plt.subplots(figsize=(3.54, 2.65))
+    # # Plot the orbital period with horizontal boxes
+    # sns.lineplot(data=results, x="k", y="overall_f1",
+    #              palette="Set2", markers=True)
+    # # Tweak the visual presentation
+    # ax.set(ylabel="F1", xlabel='k-factor')
+    # f.savefig(plots_path + f'{dataset}_f1.jpg')
+    # for cls in labels:
+    #     if cls != "O":
+    #         f, ax = plt.subplots(figsize=(3.54, 2.65))
+    #         # Plot the orbital period with horizontal boxes
+    #         sns.lineplot(data=results, x="k", y=f"{cls}.f1",
+    #                      palette="Set2", markers=True)
+    #         # Tweak the visual presentation
+    #         ax.set(ylabel=f"F1({cls})", xlabel='k-factor')
+    #         f.savefig(plots_path + f'{dataset}_{cls}_f1.jpg')
 
 
 if __name__ == "__main__":
