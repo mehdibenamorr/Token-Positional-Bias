@@ -24,14 +24,20 @@ def set_random_seed(seed: int):
     torch.backends.cudnn.benchmark = False
 
 
-def get_parser() -> argparse.ArgumentParser:
+def get_parser(HF=True) -> argparse.ArgumentParser:
     """
     return basic arg parser
     """
-    parser = HfArgumentParser(TrainingArguments, description="argument parser")
+    if HF:
+        parser = HfArgumentParser(TrainingArguments, description="argument parser")
+    else:
+        parser = argparse.ArgumentParser()
+
     parser.add_argument('-model', type=str, default='bert-base-uncased',
                         help='Name of a specific model previously saved inside "models" folder'
                              ' or name of an HuggingFace model')
+    parser.add_argument('-wandb_user', type=str, default='benamor',
+                        help='Name of the WandB account where the models are stored')
     parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
@@ -56,6 +62,9 @@ def get_parser() -> argparse.ArgumentParser:
                         )
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
+                        )
+    parser.add_argument('--log_attentions', action="store_true",
+                        help='If set, attention scores will be logged',
                         )
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '

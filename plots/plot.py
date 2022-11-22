@@ -215,7 +215,7 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
                          palette="Set2", markers=True)
             # Tweak the visual presentation
             ax.set(ylabel="F1", xlabel='k')
-            f.savefig(plots_path + f'{dataset}_f1.jpg')
+            f.savefig(save_dir + f'{dataset}_f1.jpg')
             for cls in labels:
                 if cls != "O":
                     f, ax = plt.subplots(figsize=(3.54, 2.65))
@@ -224,7 +224,7 @@ def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonote
                                  palette="Set2", markers=True)
                     # Tweak the visual presentation
                     ax.set(ylabel=f"F1({cls})", xlabel='k')
-                    f.savefig(plots_path + f'{dataset}_{cls}_f1.jpg')
+                    f.savefig(save_dir + f'{dataset}_{cls}_f1.jpg')
 
 
 def bias_experiment_k(dataset="conll03"):

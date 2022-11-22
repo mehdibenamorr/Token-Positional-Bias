@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 # file: bert_ner.py
 from typing import Optional, Union, Tuple, List
 from torch.nn import CrossEntropyLoss
-from transformers import BertPreTrainedModel, BertModel
+from transformers import BertPreTrainedModel, BertModel, apply_chunking_to_forward
 import torch
 import torch.nn as nn
-from transformers.modeling_outputs import TokenClassifierOutput
-
-
-def eval_bert_attention(model: BertModel):
+from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
+import math
 
 
 class BertForTokenClassification(BertPreTrainedModel):
@@ -19,7 +16,7 @@ class BertForTokenClassification(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-
+        self.log_attentions = config.log_attentions
         self.bert = BertModel(config, add_pooling_layer=False)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
@@ -49,17 +46,29 @@ class BertForTokenClassification(BertPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        if self.config.log_attentions:
+            outputs = self.dissected_bert_forward(input_ids,
+                                                  attention_mask=attention_mask,
+                                                  token_type_ids=token_type_ids,
+                                                  position_ids=position_ids,
+                                                  head_mask=head_mask,
+                                                  inputs_embeds=inputs_embeds,
+                                                  output_attentions=output_attentions,
+                                                  output_hidden_states=output_hidden_states,
+                                                  return_dict=return_dict,
+                                                  )
+        else:
+            outputs = self.bert(
+                input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                position_ids=position_ids,
+                head_mask=head_mask,
+                inputs_embeds=inputs_embeds,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
 
         sequence_output = outputs[0]
 
@@ -82,7 +91,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def eval_attentions(
+    def dissected_bert_forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
             attention_mask: Optional[torch.Tensor] = None,
@@ -100,16 +109,16 @@ class BertForTokenClassification(BertPreTrainedModel):
     ):
         if not self.log_attentions:
             return self.bert(
-            input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            position_ids=position_ids,
-            head_mask=head_mask,
-            inputs_embeds=inputs_embeds,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+                input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                position_ids=position_ids,
+                head_mask=head_mask,
+                inputs_embeds=inputs_embeds,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
         output_attentions = output_attentions if output_attentions is not None else self.bert.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.bert.config.output_hidden_states
@@ -129,7 +138,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         device = input_ids.device if input_ids is not None else inputs_embeds.device
 
         # past_key_values_length
-        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
+        past_key_values_length = 0
 
         if attention_mask is None:
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
@@ -146,6 +155,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask: torch.Tensor = self.bert.get_extended_attention_mask(attention_mask, input_shape)
 
+        encoder_extended_attention_mask = None
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -161,6 +171,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
+
         encoder_outputs = self.bert.encoder(
             embedding_output,
             attention_mask=extended_attention_mask,
@@ -169,14 +180,73 @@ class BertForTokenClassification(BertPreTrainedModel):
             encoder_attention_mask=encoder_extended_attention_mask,
             past_key_values=past_key_values,
             use_cache=use_cache,
-            output_attentions=output_attentions,
+            output_attentions=True,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
 
+        # Dissected Encoder code (Start)
+        hidden_states = embedding_output
+        all_hidden_states = () if output_hidden_states else None
+        all_self_attentions = () if output_attentions else None
+        for i, layer_module in enumerate(self.layer):
+            if output_hidden_states:
+                all_hidden_states = all_hidden_states + (hidden_states,)
+            layer_head_mask = head_mask[i] if head_mask is not None else None
+            # Dissected BertLayer code (Start)
 
+            # Dissected BertAttention/SelfAttention code (Start)
+            mixed_query_layer = layer_module.attention.Self.query(hidden_states)
+            query_layer = layer_module.attention.Self.transpose_for_scores(mixed_query_layer)
+            key_layer = layer_module.attention.Self.transpose_for_scores(layer_module.attention.Self.key(hidden_states))
+            value_layer = layer_module.attention.Self.transpose_for_scores(
+                layer_module.attention.Self.value(hidden_states))
 
-        sequence_output = encoder_outputs[0]
+            # Take the dot product between "query" and "key" to get the raw attention scores.
+            self_attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
+            self_attention_scores = self_attention_scores / math.sqrt(layer_module.attention.Self.attention_head_size)
+            if attention_mask is not None:
+                # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
+                self_attention_scores = self_attention_scores + attention_mask
+
+            # Normalize the attention scores to probabilities.
+            self_attention_probs = nn.functional.softmax(self_attention_scores, dim=-1)
+
+            # This is actually dropping out entire tokens to attend to, which might
+            # seem a bit unusual, but is taken from the original Transformer paper.
+            self_attention_probs = layer_module.attention.Self.dropout(self_attention_probs)
+            # Mask heads if we want to
+            if layer_head_mask is not None:
+                self_attention_probs = self_attention_probs * layer_head_mask
+
+            context_layer = torch.matmul(self_attention_probs, value_layer)
+            context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
+            new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
+            context_layer = context_layer.view(new_context_layer_shape)
+            self_attention_outputs = (context_layer, self_attention_probs)
+
+            attention_output = layer_module.attention.output(self_attention_outputs[0], hidden_states)
+
+            attention_outputs = (attention_output,) + self_attention_outputs[1:]
+
+            # Dissected BertAttention/SelfAttention code (End)
+            layer_output = apply_chunking_to_forward(
+                layer_module.feed_forward_chunk, layer_module.chunk_size_feed_forward, layer_module.seq_len_dim,
+                attention_output
+            )
+
+            layer_outputs = (layer_output,) + attention_outputs[1:]
+            # Dissected BertLayer code (End)
+
+            hidden_states = layer_outputs[0]
+            all_self_attentions = all_self_attentions + (layer_outputs[1],)
+
+        if output_hidden_states:
+            all_hidden_states = all_hidden_states + (hidden_states,)
+
+        # Dissected Encoder code (End)
+
+        sequence_output = hidden_states
         pooled_output = self.bert.pooler(sequence_output) if self.bert.pooler is not None else None
 
         if not return_dict:
@@ -185,8 +255,6 @@ class BertForTokenClassification(BertPreTrainedModel):
         return BaseModelOutputWithPoolingAndCrossAttentions(
             last_hidden_state=sequence_output,
             pooler_output=pooled_output,
-            past_key_values=encoder_outputs.past_key_values,
-            hidden_states=encoder_outputs.hidden_states,
-            attentions=encoder_outputs.attentions,
-            cross_attentions=encoder_outputs.cross_attentions,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attentions,
         )

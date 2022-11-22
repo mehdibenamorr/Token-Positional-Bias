@@ -12,3 +12,4 @@ class BertForTokenClassificationConfig(BertConfig):
         self.hidden_size = kwargs.get("hidden_size", 768)
         self.truncated_normal = kwargs.get("truncated_normal", False)
         self.position_embedding_type = kwargs.get("position_embedding_type", "absolute")
+        self.watch_attentions = kwargs.get("watch_attentions", False)
