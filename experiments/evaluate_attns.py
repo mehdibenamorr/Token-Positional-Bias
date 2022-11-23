@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-os.environ['WANDB_DISABLED'] = "true"
+# os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNEREval(Trainer):
@@ -41,7 +41,7 @@ class BertForNEREval(Trainer):
         # Args
         self.model_path = model_path
         self.max_length = all_args.max_length
-        self.log_attentions = all_args.log_attentions
+        self.watch_attentions = all_args.watch_attentions
         self.all_args = all_args
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
 
@@ -58,7 +58,9 @@ class BertForNEREval(Trainer):
 
         # Model loading
         bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
-                                                                       log_attentions=self.log_attentions)
+                                                                       watch_attentions=self.watch_attentions,
+                                                                       output_attentions=True,
+                                                                       output_hidden_states=True)
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
@@ -82,35 +84,34 @@ class BertForNEREval(Trainer):
 
 
 def main():
-    parser = get_parser()
+    parser = get_parser(HF=False)
     args = parser.parse_args()
-    os.environ["WANDB_DIR"] = training_args.output_dir
     experiment_name = f"{args.experiment}-{args.dataset}"
     entity = args.wandb_user
-
-    for i in range(args.nbruns):
+    api = wandb.Api()
+    experiment_ref = f"bert_position_bias_no_cv-{args.dataset}"
+    runs = api.runs(entity + "/" + experiment_ref)
+    tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
+            f"padding={args.padding}",
+            f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}",
+            f"duplicate={args.duplicate}", f"log_attentions={args.watch_attentions}"]
+    for i, run in enumerate(runs):
         config = vars(args)
-        wandb.init(project=experiment_name, name=f"run={i + 1}", tags=tags,
+        eval_run = wandb.init(project=experiment_name, name=run.name, tags=tags,
                    config=config)
-        print(f"Run number:{i + 1}")
+        print(f"Run Name:{run.name}")
 
         # Dataset
         dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
         processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
                                  kwargs=config)
 
-        train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
-                                                      fn_kwargs={"concatenate": args.concatenate},
-                                                      batched=True)
-        eval_dataset = dataset.dataset["dev_"].map(processor.tokenize_and_align_labels, batched=True)
-
-        task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
-                                      eval=eval_dataset, dataset=dataset, processor=processor)
-        task_trainer.train()
-        #
-        # task_trainer.evaluate()
-
-        # task_trainer.log_pos_losses()
+        # Download the fine-tuned model
+        run_path = "/".join(run.path[:-1])
+        model_url = f"{run_path}/model-{run.id}:latest"
+        model_artifact = eval_run.use_artifact(model_url, type="model")
+        model_path = model_artifact.download()
+        task_eval = BertForNEREval(model_path, all_args=args, dataset=dataset, processor=processor)
 
         if args.duplicate:
             for k in range(1, 11):
@@ -118,16 +119,16 @@ def main():
                                                             fn_kwargs={"duplicate": args.duplicate, "k": k},
                                                             load_from_cache_file=False, batched=True)
 
-                task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
+                task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
                                                         fn_kwargs={"duplicate": True, "k": 1},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+            task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
 
         wandb.finish()
-        task_trainer = None
+        task_eval = None
         import gc
         gc.collect()
         with torch.no_grad():

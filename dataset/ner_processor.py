@@ -87,12 +87,13 @@ class NERProcessor(object):
 def duplicate_seq(features, k=2):
     tokens = [k * x for x in features["tokens"]]
     tags = [k * x for x in features["ner_tags"]]
-
+    k_ = [[k] for x in features["ner_tags"]]
     return {"id": [str(i) for i in range(len(tokens))],
             "tokens": tokens,
             "ner_tags": tags,
             "original_tokens": features["tokens"],
-            "original_tags": features["ner_tags"]}
+            "original_tags": features["ner_tags"],
+            "k": k_}
 
 
 def concatenate_seq(features, length=None):

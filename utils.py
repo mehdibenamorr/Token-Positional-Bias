@@ -63,7 +63,7 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
                         )
-    parser.add_argument('--log_attentions', action="store_true",
+    parser.add_argument('--watch_attentions', action="store_true",
                         help='If set, attention scores will be logged',
                         )
     parser.add_argument('--position_embedding_type', default='absolute',
