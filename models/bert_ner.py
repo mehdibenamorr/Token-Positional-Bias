@@ -58,7 +58,7 @@ class BertForTokenClassification(BertPreTrainedModel):
                                                   output_attentions=output_attentions,
                                                   output_hidden_states=output_hidden_states,
                                                   return_dict=return_dict,
-                                                  )
+                                                  k=k)
         else:
             outputs = self.bert(
                 input_ids,
@@ -108,6 +108,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
+            k: Optional[torch.Tensor] = None
     ):
         output_attentions = output_attentions if output_attentions is not None else self.bert.config.output_attentions
         output_hidden_states = (
@@ -226,7 +227,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         sequence_output = hidden_states
         pooled_output = self.bert.pooler(sequence_output) if self.bert.pooler is not None else None
 
-        # First calculate cosine simlarity with intermediate representations wih each position
+        # First calculate cosine simlarity with intermediate representations wih each position (per k)
         seq_len = embedding_output.shape[-2]
         position_ids = torch.arange(seq_len, dtype=torch.long, device=embedding_output.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
@@ -234,7 +235,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         position_embs = self.embeddings.position_embeddings(position_ids)
         word_embs = self.embeddings.word_embeddings(input_ids)
 
-        cos_values = cosine_similarity(word_embs, position_embs, embedding_output, )
+        cos_values = cosine_similarity(word_embs, position_embs, embedding_output, all_hidden_states,)
 
         if not return_dict:
             return tuple(

@@ -1,40 +1,51 @@
+from typing import Tuple, Optional
+
 import torch
 import torch.nn.functional as F
 
 
-def cosine_similarity(word_embs, position_embs, embedding_output, all_hidden_states, all_self_attentions,
-                      attention_mask):
-    cos_pos = []
-    cos_word = []
+def cosine_similarity(word_embeds: torch.FloatTensor,
+                      position_embeds: torch.FloatTensor,
+                      embedding_output: torch.FloatTensor,
+                      attention_mask: torch.Tensor,
+                      all_hidden_states: Optional[Tuple[torch.FloatTensor]] = None,
+                      all_self_attentions: Optional[Tuple[torch.FloatTensor]] = None,
+                      k: Optional[torch.Tensor] = None):
+    """
+    Calculate cosine similarity between position and word embeddings, and between attentions score/probabilities.
+    """
+    cosine_positions = []
+    cosine_words = []
 
-    sims_pos = F.cosine_similarity(position_embs, embedding_output, dim=-1)
+    last_layer_position_similarity = F.cosine_similarity(position_embeds, embedding_output, dim=-1)
 
     attention_mask = attention_mask.float()
 
-    sims_pos = torch.mul(sims_pos, attention_mask)
-    cos_pos.append(sims_pos)
+    last_layer_position_similarity = torch.mul(last_layer_position_similarity, attention_mask)
+    cosine_positions.append(last_layer_position_similarity)
 
-    sims_word = F.cosine_similarity(word_embs, embedding_output, dim=-1)
-    sims_word = torch.mul(sims_word, attention_mask)
-    cos_word.append(sims_word)
+    last_layer_word_similarity = F.cosine_similarity(word_embeds, embedding_output, dim=-1)
+    last_layer_word_similarity = torch.mul(last_layer_word_similarity, attention_mask)
+    cosine_words.append(last_layer_word_similarity)
 
-    for layer in all_hidden_states:
-        sims_pos = F.cosine_similarity(position_embs, layer, dim=-1)
-        sims_pos = torch.mul(sims_pos, attention_mask)
-        cos_pos.append(sims_pos)
+    if all_hidden_states is not None:
+        for layer in all_hidden_states:
+            layer_position_similarity = F.cosine_similarity(position_embeds, layer, dim=-1)
+            layer_position_similarity = torch.mul(layer_position_similarity, attention_mask)
+            cosine_positions.append(layer_position_similarity)
 
-        sims_word = F.cosine_similarity(word_embs, layer, dim=-1)
-        sims_word = torch.mul(sims_word, attention_mask)
-        cos_word.append(sims_word)
+            layer_word_similarty = F.cosine_similarity(word_embeds, layer, dim=-1)
+            layer_word_similarty = torch.mul(layer_word_similarty, attention_mask)
+            cosine_words.append(layer_word_similarty)
 
     # cos : (batch, seq_len)
     # HERE
-    cos_pos = torch.stack(cos_pos)
-    cos_pos = torch.transpose(cos_pos, 0, 1)
+    cosine_positions = torch.stack(cosine_positions)
+    cosine_positions = torch.transpose(cosine_positions, 0, 1)
 
-    cos_word = torch.stack(cos_word)
-    cos_word = torch.transpose(cos_word, 0, 1)
+    cosine_words = torch.stack(cosine_words)
+    cosine_words = torch.transpose(cosine_words, 0, 1)
 
-    cos = {'position': cos_pos, 'word': cos_word}
+    output = {'position_cosine': cosine_positions, 'word_cosine': cosine_words}
 
-    return cos
+    return output
