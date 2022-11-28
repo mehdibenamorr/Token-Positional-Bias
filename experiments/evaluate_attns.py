@@ -7,7 +7,7 @@
 from utils import set_random_seed
 
 set_random_seed(23456)
-from plots.plot import plot_loss_dist
+from plot_utils.plot import plot_loss_dist
 import pandas as pd
 from transformers.trainer_utils import EvalLoopOutput
 import argparse
@@ -47,6 +47,7 @@ class BertForNEREval(Trainer):
 
         training_args = TrainingArguments(
             self.model_path,
+            per_device_eval_batch_size=1,
             do_predict=True,
             report_to=["none"],
             logging_strategy="no"
@@ -122,10 +123,10 @@ def main():
                 task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 1},
+                                                        fn_kwargs={"duplicate": True, "k": 10},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+            task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=10)
 
         wandb.finish()
         task_eval = None

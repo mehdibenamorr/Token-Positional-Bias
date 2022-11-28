@@ -7,7 +7,7 @@
 from utils import set_random_seed
 
 set_random_seed(23456)
-from plots.plot import plot_loss_dist
+from plot_utils.plot import plot_loss_dist
 import pandas as pd
 from transformers.trainer_utils import EvalLoopOutput
 import argparse

@@ -10,7 +10,7 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
                       attention_mask: torch.Tensor,
                       all_hidden_states: Optional[Tuple[torch.FloatTensor]] = None,
                       all_self_attentions: Optional[Tuple[torch.FloatTensor]] = None,
-                      k: Optional[torch.Tensor] = None):
+                      k: Optional[int] = None):
     """
     Calculate cosine similarity between position and word embeddings, and between attentions score/probabilities.
     """
@@ -46,6 +46,6 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
     cosine_words = torch.stack(cosine_words)
     cosine_words = torch.transpose(cosine_words, 0, 1)
 
-    output = {'position_cosine': cosine_positions, 'word_cosine': cosine_words}
+    output = {'positions_cosine': cosine_positions, 'words_cosine': cosine_words}
 
     return output

@@ -5,8 +5,10 @@
 .texpadtmp/
 src/hyperparameter_optimization/data/pamap.pkl
 ~*
-
-plots/plots/*
+# Created folders
+*/plots/*
+*/artifacts/*
+*/wandb/*
 
 ## Standard Files from sharing
 .DS*

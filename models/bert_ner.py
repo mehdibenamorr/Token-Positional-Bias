@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
 import math
+
 from metrics.cosine_similartiy import cosine_similarity
 
 
@@ -27,6 +28,7 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+        self.attn_dict = {}
 
     def forward(
             self,
@@ -47,7 +49,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
+        k_factor = k.unique().item()
         if self.config.watch_attentions:
             outputs = self.dissected_bert_forward(input_ids,
                                                   attention_mask=attention_mask,
@@ -58,7 +60,7 @@ class BertForTokenClassification(BertPreTrainedModel):
                                                   output_attentions=output_attentions,
                                                   output_hidden_states=output_hidden_states,
                                                   return_dict=return_dict,
-                                                  k=k)
+                                                  k=k_factor)
         else:
             outputs = self.bert(
                 input_ids,
@@ -108,7 +110,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
-            k: Optional[torch.Tensor] = None
+            k: int = None
     ):
         output_attentions = output_attentions if output_attentions is not None else self.bert.config.output_attentions
         output_hidden_states = (
@@ -167,13 +169,15 @@ class BertForTokenClassification(BertPreTrainedModel):
         hidden_states = embedding_output
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
+        attn_dict = {}
         for i, layer_module in enumerate(self.bert.encoder.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
             layer_head_mask = head_mask[i] if head_mask is not None else None
             # Dissected BertLayer code (Start)
 
-            # Dissected BertAttention/selfAttention code (Start)
+            # Dissected BertAttention code (Start)
+            # Dissected SelfAttention code (Start)
             mixed_query_layer = layer_module.attention.self.query(hidden_states)
             query_layer = layer_module.attention.self.transpose_for_scores(mixed_query_layer)
             key_layer = layer_module.attention.self.transpose_for_scores(layer_module.attention.self.key(hidden_states))
@@ -190,9 +194,17 @@ class BertForTokenClassification(BertPreTrainedModel):
             # Normalize the attention scores to probabilities.
             self_attention_probs = nn.functional.softmax(self_attention_scores, dim=-1)
 
+            if f"layer_attn_{i}" not in self.attn_dict.keys():
+                self.attn_dict.update({f"layer_attn_{i}": {"attention_scores": [self_attention_scores],
+                                                      "attention_probs": [self_attention_probs]}})
+            else:
+                self.attn_dict[f"layer_attn_{i}"]["attention_score"].append(self_attention_scores)
+                self.attn_dict[f"layer_attn_{i}"]["attention_probs"].append(self_attention_probs)
+
             # This is actually dropping out entire tokens to attend to, which might
             # seem a bit unusual, but is taken from the original Transformer paper.
             self_attention_probs = layer_module.attention.self.dropout(self_attention_probs)
+
             # Mask heads if we want to
             if layer_head_mask is not None:
                 self_attention_probs = self_attention_probs * layer_head_mask
@@ -202,12 +214,13 @@ class BertForTokenClassification(BertPreTrainedModel):
             new_context_layer_shape = context_layer.size()[:-2] + (layer_module.attention.self.all_head_size,)
             context_layer = context_layer.view(new_context_layer_shape)
             self_attention_outputs = (context_layer, self_attention_probs)
+            # Dissected SelfAttention code (End)
 
             attention_output = layer_module.attention.output(self_attention_outputs[0], hidden_states)
 
             attention_outputs = (attention_output,) + self_attention_outputs[1:]
 
-            # Dissected BertAttention/selfAttention code (End)
+            # Dissected BertAttention code (End)
             layer_output = apply_chunking_to_forward(
                 layer_module.feed_forward_chunk, layer_module.chunk_size_feed_forward, layer_module.seq_len_dim,
                 attention_output
@@ -232,10 +245,12 @@ class BertForTokenClassification(BertPreTrainedModel):
         position_ids = torch.arange(seq_len, dtype=torch.long, device=embedding_output.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
 
-        position_embs = self.embeddings.position_embeddings(position_ids)
-        word_embs = self.embeddings.word_embeddings(input_ids)
+        position_embs = self.bert.embeddings.position_embeddings(position_ids)
+        word_embs = self.bert.embeddings.word_embeddings(input_ids)
 
-        cos_values = cosine_similarity(word_embs, position_embs, embedding_output, all_hidden_states,)
+        self.results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
+                                    embedding_output=embedding_output, attention_mask=attention_mask,
+                                    all_hidden_states=all_hidden_states, all_self_attentions=all_self_attentions, k=k)
 
         if not return_dict:
             return tuple(

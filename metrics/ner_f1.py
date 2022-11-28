@@ -43,7 +43,7 @@ from seqeval.metrics import classification_report, accuracy_score
 from seqeval.metrics.sequence_labeling import get_entities
 from seqeval.metrics.v1 import check_consistent_length
 
-from plots.plot import plot_pos_dist, plt
+from plot_utils.plot import plot_pos_dist, plt
 
 # metric = load_metric("seqeval")
 
