@@ -2,16 +2,13 @@
 # -*- coding: utf-8 -*-
 # file: evaluate_attns.py
 #
-
+from torch.utils.data import DataLoader, SequentialSampler
 
 from utils import set_random_seed
 
 set_random_seed(23456)
-from plot_utils.plot import plot_loss_dist
-import pandas as pd
-from transformers.trainer_utils import EvalLoopOutput
 import argparse
-from typing import Dict, Union, Any, Optional, List
+from typing import Dict, Optional, List
 import os
 from models.config import BertForTokenClassificationConfig
 from models.bert_ner import BertForTokenClassification
@@ -20,17 +17,14 @@ from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
 from dataset.collate_fn import DataCollator
 import torch
-import torch.nn as nn
-from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
-from metrics.ner_f1 import compute_ner_pos_f1, ner_span_metrics
+from metrics.ner_f1 import ner_span_metrics
 from transformers import Trainer, TrainingArguments
-from pathlib import Path
-from torch.utils.data import DataLoader
 from datasets import Dataset
 import wandb
-import matplotlib.pyplot as plt
+from transformers.trainer import logger
 
 os.environ['WANDB_LOG_MODEL'] = "true"
+
 
 # os.environ['WANDB_DISABLED'] = "true"
 
@@ -83,6 +77,39 @@ class BertForNEREval(Trainer):
                                                           k=k)
         return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
+    def eval_attn(self,
+                  test_dataset: Optional[Dataset],
+                  ) -> Dict[str, float]:
+
+        # dataloader = self.get_test_dataloader(test_dataset=test_dataset)
+        test_sampler = SequentialSampler(test_dataset)
+        dataloader = DataLoader(
+            test_dataset,
+            sampler=test_sampler,
+            collate_fn=self.data_collator,
+            drop_last=self.args.dataloader_drop_last,
+            batch_size=self.args.eval_batch_size,
+            num_workers=self.args.dataloader_num_workers,
+            pin_memory=self.args.dataloader_pin_memory,
+        )
+        logger.info(f"***** Running Attention Evaluation *****")
+        logger.info(f"  Num examples = {self.num_examples(dataloader)}")
+        batch_size = self.args.eval_batch_size
+        logger.info(f"  Batch size = {batch_size}")
+        for step, inputs in enumerate(dataloader):
+            self._set_signature_columns_if_needed()
+            signature_columns = self._signature_columns
+
+            ignored_inputs = list(set(test_dataset.column_names) - set(signature_columns))
+            fwd_inputs = {k : v for k,v in inputs.items() if k not in ignored_inputs}
+            fwd_inputs = self._prepare_inputs(fwd_inputs)
+            with torch.no_grad():
+                outputs = self.model(**fwd_inputs, return_dict=False)
+            cos_results = outputs[-2]
+            attn_dict = outputs[-2]
+
+
+
 
 def main():
     parser = get_parser(HF=False)
@@ -99,7 +126,7 @@ def main():
     for i, run in enumerate(runs):
         config = vars(args)
         eval_run = wandb.init(project=experiment_name, name=run.name, tags=tags,
-                   config=config)
+                              config=config)
         print(f"Run Name:{run.name}")
 
         # Dataset
@@ -121,12 +148,12 @@ def main():
                                                             load_from_cache_file=False, batched=True)
 
                 task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
-        else:
+        elif args.watch_attentions:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
                                                         fn_kwargs={"duplicate": True, "k": 10},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=10)
+            task_eval.eval_attn(test_dataset=test_dataset)
 
         wandb.finish()
         task_eval = None

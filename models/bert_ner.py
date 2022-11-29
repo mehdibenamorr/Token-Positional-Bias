@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # file: bert_ner.py
+import math
 from typing import Optional, Union, Tuple, List
-from torch.nn import CrossEntropyLoss
-from transformers import BertPreTrainedModel, BertModel, apply_chunking_to_forward
+
 import torch
 import torch.nn as nn
+from torch.nn import CrossEntropyLoss
+from transformers import BertPreTrainedModel, BertModel, apply_chunking_to_forward
 from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
-import math
 
 from metrics.cosine_similartiy import cosine_similarity
+
+
+def clip_tensor(input_tensor: torch.Tensor, mask: torch.BoolTensor, dim=None):
+    if dim is not None:
+        return input_tensor
 
 
 class BertForTokenClassification(BertPreTrainedModel):
@@ -42,14 +48,14 @@ class BertForTokenClassification(BertPreTrainedModel):
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
-            k: Optional[torch.Tensor] = None,
+            k: Optional[List] = None,
     ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        k_factor = k.unique().item()
+        k_factor = k[0][0]
         if self.config.watch_attentions:
             outputs = self.dissected_bert_forward(input_ids,
                                                   attention_mask=attention_mask,
@@ -194,12 +200,8 @@ class BertForTokenClassification(BertPreTrainedModel):
             # Normalize the attention scores to probabilities.
             self_attention_probs = nn.functional.softmax(self_attention_scores, dim=-1)
 
-            if f"layer_attn_{i}" not in self.attn_dict.keys():
-                self.attn_dict.update({f"layer_attn_{i}": {"attention_scores": [self_attention_scores],
-                                                      "attention_probs": [self_attention_probs]}})
-            else:
-                self.attn_dict[f"layer_attn_{i}"]["attention_score"].append(self_attention_scores)
-                self.attn_dict[f"layer_attn_{i}"]["attention_probs"].append(self_attention_probs)
+            attn_dict.update({f"layer_attn_{i}": {"attention_scores": self_attention_scores,
+                                                  "attention_probs": self_attention_probs}})
 
             # This is actually dropping out entire tokens to attend to, which might
             # seem a bit unusual, but is taken from the original Transformer paper.
@@ -248,9 +250,10 @@ class BertForTokenClassification(BertPreTrainedModel):
         position_embs = self.bert.embeddings.position_embeddings(position_ids)
         word_embs = self.bert.embeddings.word_embeddings(input_ids)
 
-        self.results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
-                                    embedding_output=embedding_output, attention_mask=attention_mask,
-                                    all_hidden_states=all_hidden_states, all_self_attentions=all_self_attentions, k=k)
+        cos_results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
+                                        embedding_output=embedding_output, attention_mask=attention_mask,
+                                        all_hidden_states=all_hidden_states, all_self_attentions=all_self_attentions,
+                                        k=k)
 
         if not return_dict:
             return tuple(
@@ -259,7 +262,9 @@ class BertForTokenClassification(BertPreTrainedModel):
                     sequence_output,
                     pooled_output,
                     all_hidden_states,
-                    all_self_attentions
+                    all_self_attentions,
+                    cos_results,
+                    attn_dict
                 ]
                 if v is not None
             )

@@ -9,6 +9,7 @@ from transformers import PreTrainedTokenizerBase
 from transformers.data.data_collator import DataCollatorMixin
 from transformers.utils import PaddingStrategy
 
+
 @dataclass
 class DataCollator(DataCollatorMixin):
     """
@@ -74,6 +75,11 @@ class DataCollator(DataCollatorMixin):
             batch[label_name] = [
                 [self.label_pad_token_id] * (sequence_length - len(label)) + list(label) for label in labels
             ]
-
-        batch = {k: torch.tensor(v, dtype=torch.int64) for k, v in batch.items()}
-        return batch
+        batch_ = {}
+        for k, v in batch.items():
+            if k in ["input_ids", "token_type_ids", "attention_mask", "labels"]:
+                batch_.update({k: torch.tensor(v, dtype=torch.int64)})
+            else:
+                batch_.update({k: v})
+        # batch = {k: torch.tensor(v, dtype=torch.int64) for k, v in batch.items()}
+        return batch_

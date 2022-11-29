@@ -4,6 +4,33 @@ import torch
 import torch.nn.functional as F
 
 
+def apply_chunking_to_tensors(
+        chunk_size: int, chunk_dim: int, input_tensor
+) -> torch.Tensor:
+    """
+    This function chunks the `input_tensors` into smaller input tensor parts of size `chunk_size` over the dimension
+    `chunk_dim`. It then applies a layer `cosine similarity` to each chunk independently to save memory.
+
+
+    """
+
+    if chunk_size > 0:
+        tensor_shape = input_tensor.shape[chunk_dim]
+        if input_tensor.shape[chunk_dim] % chunk_size != 0:
+            raise ValueError(
+                f"The dimension to be chunked {input_tensor.shape[chunk_dim]} has to be a multiple of the chunk "
+                f"size {chunk_size}"
+            )
+
+        num_chunks = input_tensor.shape[chunk_dim] // chunk_size
+
+        # chunk input tensor into tuples
+        input_tensor_chunks = input_tensor.chunk(num_chunks, dim=chunk_dim)
+        return input_tensor_chunks
+
+    return input_tensor
+
+
 def cosine_similarity(word_embeds: torch.FloatTensor,
                       position_embeds: torch.FloatTensor,
                       embedding_output: torch.FloatTensor,
@@ -16,6 +43,10 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
     """
     cosine_positions = []
     cosine_words = []
+
+    sequence_mask = attention_mask == 1
+
+    # Chunk embeddings into k chunks
 
     last_layer_position_similarity = F.cosine_similarity(position_embeds, embedding_output, dim=-1)
 
