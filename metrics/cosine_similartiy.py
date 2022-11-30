@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 
 import torch
 import torch.nn.functional as F
@@ -18,7 +18,7 @@ def apply_chunking_to_tensors(
         tensor_shape = input_tensor.shape[chunk_dim]
         if input_tensor.shape[chunk_dim] % chunk_size != 0:
             raise ValueError(
-                f"The dimension to be chunked {input_tensor.shape[chunk_dim]} has to be a multiple of the chunk "
+                f"The dimension to be chunked {tensor_shape} has to be a multiple of the chunk "
                 f"size {chunk_size}"
             )
 
@@ -35,8 +35,8 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
                       position_embeds: torch.FloatTensor,
                       embedding_output: torch.FloatTensor,
                       attention_mask: torch.Tensor,
-                      all_hidden_states: Optional[Tuple[torch.FloatTensor]] = None,
-                      all_self_attentions: Optional[Tuple[torch.FloatTensor]] = None,
+                      all_hidden_states: Optional[Dict] = None,
+                      all_self_attentions: Optional[Dict] = None,
                       k: Optional[int] = None):
     """
     Calculate cosine similarity between position and word embeddings, and between attentions score/probabilities.
@@ -44,9 +44,12 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
     cosine_positions = []
     cosine_words = []
 
-    sequence_mask = attention_mask == 1
-
     # Chunk embeddings into k chunks
+    chunk_size = int(embedding_output.shape[-2] / k)
+
+    embedding_output = apply_chunking_to_tensors(chunk_size=chunk_size, chunk_dim=0, input_tensor=embedding_output)
+    position_embeds = apply_chunking_to_tensors(chunk_size=chunk_size, chunk_dim=0, input_tensor=position_embeds)
+    word_embeds = apply_chunking_to_tensors(chunk_size=chunk_size, chunk_dim=0, input_tensor=word_embeds)
 
     last_layer_position_similarity = F.cosine_similarity(position_embeds, embedding_output, dim=-1)
 
@@ -60,7 +63,7 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
     cosine_words.append(last_layer_word_similarity)
 
     if all_hidden_states is not None:
-        for layer in all_hidden_states:
+        for key, layer in all_hidden_states.items():
             layer_position_similarity = F.cosine_similarity(position_embeds, layer, dim=-1)
             layer_position_similarity = torch.mul(layer_position_similarity, attention_mask)
             cosine_positions.append(layer_position_similarity)

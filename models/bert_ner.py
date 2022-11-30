@@ -172,10 +172,13 @@ class BertForTokenClassification(BertPreTrainedModel):
         )
 
         # Dissected Encoder code (Start)
+        sequence_mask = attention_mask.squeeze(0) == 1
+        sequence_mask[0] = sequence_mask[attention_mask.sum().item() - 1] = False  # [CLS] and [SEP] tokens
         hidden_states = embedding_output
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
         attn_dict = {}
+        embs_dict = {}
         for i, layer_module in enumerate(self.bert.encoder.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
@@ -200,8 +203,11 @@ class BertForTokenClassification(BertPreTrainedModel):
             # Normalize the attention scores to probabilities.
             self_attention_probs = nn.functional.softmax(self_attention_scores, dim=-1)
 
-            attn_dict.update({f"layer_attn_{i}": {"attention_scores": self_attention_scores,
-                                                  "attention_probs": self_attention_probs}})
+            attention_scores = self_attention_scores.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
+            attention_probs = self_attention_probs.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
+
+            attn_dict.update({f"layer_attn_{i}": {"attention_scores": attention_scores,
+                                                  "attention_probs": attention_probs}})
 
             # This is actually dropping out entire tokens to attend to, which might
             # seem a bit unusual, but is taken from the original Transformer paper.
@@ -232,6 +238,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             # Dissected BertLayer code (End)
 
             hidden_states = layer_outputs[0]
+            embs_dict.update({f"layer_emb_{i}": hidden_states[:, sequence_mask, :].squeeze(0)})
             if output_attentions:
                 all_self_attentions = all_self_attentions + (layer_outputs[1],)
 
@@ -243,16 +250,17 @@ class BertForTokenClassification(BertPreTrainedModel):
         pooled_output = self.bert.pooler(sequence_output) if self.bert.pooler is not None else None
 
         # First calculate cosine simlarity with intermediate representations wih each position (per k)
-        seq_len = embedding_output.shape[-2]
+        embedding_output_cut = embedding_output.squeeze(0)[sequence_mask, :]
+        inputs = input_ids[:, sequence_mask].squeeze(0)
+        seq_len = embedding_output_cut.shape[-2]
         position_ids = torch.arange(seq_len, dtype=torch.long, device=embedding_output.device)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
 
         position_embs = self.bert.embeddings.position_embeddings(position_ids)
-        word_embs = self.bert.embeddings.word_embeddings(input_ids)
+        word_embs = self.bert.embeddings.word_embeddings(inputs)
 
         cos_results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
-                                        embedding_output=embedding_output, attention_mask=attention_mask,
-                                        all_hidden_states=all_hidden_states, all_self_attentions=all_self_attentions,
+                                        embedding_output=embedding_output_cut, attention_mask=attention_mask,
+                                        all_hidden_states=embs_dict, all_self_attentions=attn_dict,
                                         k=k)
 
         if not return_dict:
