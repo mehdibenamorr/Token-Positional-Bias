@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 # file: evaluate_attns.py
 #
+import inspect
+import tempfile
+
 from torch.utils.data import DataLoader, SequentialSampler
 
 from utils import set_random_seed
@@ -79,8 +82,7 @@ class BertForNEREval(Trainer):
 
     def eval_attn(self,
                   test_dataset: Optional[Dataset],
-                  ) -> Dict[str, float]:
-
+                  ) :
         # dataloader = self.get_test_dataloader(test_dataset=test_dataset)
         test_sampler = SequentialSampler(test_dataset)
         dataloader = DataLoader(
@@ -96,19 +98,28 @@ class BertForNEREval(Trainer):
         logger.info(f"  Num examples = {self.num_examples(dataloader)}")
         batch_size = self.args.eval_batch_size
         logger.info(f"  Batch size = {batch_size}")
+        results = []
         for step, inputs in enumerate(dataloader):
-            self._set_signature_columns_if_needed()
-            signature_columns = self._signature_columns
+            # Inspect model forward signature to keep only the arguments it accepts.
+            signature = inspect.signature(self.model.dissected_feed_forward)
+            signature_columns = list(signature.parameters.keys())
 
             ignored_inputs = list(set(test_dataset.column_names) - set(signature_columns))
-            fwd_inputs = {k : v for k,v in inputs.items() if k not in ignored_inputs}
+            fwd_inputs = {k: v for k, v in inputs.items() if k not in ignored_inputs}
             fwd_inputs = self._prepare_inputs(fwd_inputs)
             with torch.no_grad():
-                outputs = self.model(**fwd_inputs, return_dict=False)
+                outputs = self.model.dissected_feed_forward(**fwd_inputs, return_dict=False)
             cos_results = outputs[-2]
-            attn_dict = outputs[-2]
-
-
+            attn_dict = outputs[-1]
+            results.append({"id": inputs["id"][0], "tokens": inputs["original_tokens"][0],
+                            "labels": [self.dataset.id2label[l] for l in inputs["original_tags"][0]],
+                            "cos_sim": cos_results,
+                            "attentions": attn_dict})
+        tempdir = tempfile.TemporaryDirectory()
+        res_file = os.path.join(tempdir.name, "results.pt")
+        torch.save(results, res_file)
+        wandb.save(res_file, policy="now")
+        return tempdir
 
 
 def main():
@@ -141,6 +152,7 @@ def main():
         model_path = model_artifact.download()
         task_eval = BertForNEREval(model_path, all_args=args, dataset=dataset, processor=processor)
 
+        tempdir = None
         if args.duplicate:
             for k in range(1, 11):
                 test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
@@ -153,9 +165,11 @@ def main():
                                                         fn_kwargs={"duplicate": True, "k": 10},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_eval.eval_attn(test_dataset=test_dataset)
+            tempdir = task_eval.eval_attn(test_dataset=test_dataset)
 
         wandb.finish()
+        if tempdir is not None:
+            tempdir.cleanup()
         task_eval = None
         import gc
         gc.collect()

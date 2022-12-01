@@ -13,11 +13,6 @@ from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutput
 from metrics.cosine_similartiy import cosine_similarity
 
 
-def clip_tensor(input_tensor: torch.Tensor, mask: torch.BoolTensor, dim=None):
-    if dim is not None:
-        return input_tensor
-
-
 class BertForTokenClassification(BertPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
@@ -47,38 +42,25 @@ class BertForTokenClassification(BertPreTrainedModel):
             labels: Optional[torch.Tensor] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
-            k: Optional[List] = None,
-    ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput]:
+            return_dict: Optional[bool] = None
+    ) -> Union[Tuple[torch.Tensor], TokenClassifierOutput, Tuple]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
             Labels for computing the token classification loss. Indices should be in `[0, ..., config.num_labels - 1]`.
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        k_factor = k[0][0]
-        if self.config.watch_attentions:
-            outputs = self.dissected_bert_forward(input_ids,
-                                                  attention_mask=attention_mask,
-                                                  token_type_ids=token_type_ids,
-                                                  position_ids=position_ids,
-                                                  head_mask=head_mask,
-                                                  inputs_embeds=inputs_embeds,
-                                                  output_attentions=output_attentions,
-                                                  output_hidden_states=output_hidden_states,
-                                                  return_dict=return_dict,
-                                                  k=k_factor)
-        else:
-            outputs = self.bert(
-                input_ids,
-                attention_mask=attention_mask,
-                token_type_ids=token_type_ids,
-                position_ids=position_ids,
-                head_mask=head_mask,
-                inputs_embeds=inputs_embeds,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
+
+        outputs = self.bert(
+            input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
 
         sequence_output = outputs[0]
 
@@ -101,7 +83,7 @@ class BertForTokenClassification(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-    def dissected_bert_forward(
+    def dissected_feed_forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
             attention_mask: Optional[torch.Tensor] = None,
@@ -109,14 +91,10 @@ class BertForTokenClassification(BertPreTrainedModel):
             position_ids: Optional[torch.Tensor] = None,
             head_mask: Optional[torch.Tensor] = None,
             inputs_embeds: Optional[torch.Tensor] = None,
-            encoder_hidden_states: Optional[torch.Tensor] = None,
-            encoder_attention_mask: Optional[torch.Tensor] = None,
-            past_key_values: Optional[List[torch.FloatTensor]] = None,
-            use_cache: Optional[bool] = None,
             output_attentions: Optional[bool] = None,
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
-            k: int = None
+            k: Optional[List] = None
     ):
         output_attentions = output_attentions if output_attentions is not None else self.bert.config.output_attentions
         output_hidden_states = (
@@ -153,8 +131,6 @@ class BertForTokenClassification(BertPreTrainedModel):
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask: torch.Tensor = self.bert.get_extended_attention_mask(attention_mask, input_shape)
-
-        encoder_extended_attention_mask = None
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
@@ -249,7 +225,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         sequence_output = hidden_states
         pooled_output = self.bert.pooler(sequence_output) if self.bert.pooler is not None else None
 
-        # First calculate cosine simlarity with intermediate representations wih each position (per k)
+        # Calculate cosine simlarity with intermediate representations wih each position (per k)
         embedding_output_cut = embedding_output.squeeze(0)[sequence_mask, :]
         inputs = input_ids[:, sequence_mask].squeeze(0)
         seq_len = embedding_output_cut.shape[-2]
@@ -258,10 +234,10 @@ class BertForTokenClassification(BertPreTrainedModel):
         position_embs = self.bert.embeddings.position_embeddings(position_ids)
         word_embs = self.bert.embeddings.word_embeddings(inputs)
 
+        k_factor = k[0][0]
         cos_results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
-                                        embedding_output=embedding_output_cut, attention_mask=attention_mask,
-                                        all_hidden_states=embs_dict, all_self_attentions=attn_dict,
-                                        k=k)
+                                        embedding_output=embedding_output_cut, all_hidden_states=embs_dict,
+                                        k=k_factor)
 
         if not return_dict:
             return tuple(
