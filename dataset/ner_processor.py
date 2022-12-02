@@ -31,7 +31,8 @@ class NERProcessor(object):
 
     def tokenize_and_align_labels(self,
                                   examples,
-                                  label_all_tokens=True, concatenate=False, duplicate=False, k=2):
+                                  label_all_tokens=True, concatenate=False, duplicate=False, k=2,
+                                  duplicate_mode="none"):
 
         def align_label(labels, word_ids, label_all_tokens=True):
             previous_word_idx = None
@@ -51,7 +52,7 @@ class NERProcessor(object):
                 previous_word_idx = word_idx
             return label_ids
 
-        examples_ = process_batch(examples, concatenate=concatenate, duplicate=duplicate, k=k)
+        examples_ = process_batch(examples, concatenate=concatenate, duplicate=duplicate, k=k, mode=duplicate_mode)
 
         tokenized_inputs = self._tokenizer(examples_["tokens"],
                                            truncation=self.truncation_strategy,
@@ -60,6 +61,8 @@ class NERProcessor(object):
                                            return_overflowing_tokens=self.return_truncated_tokens,
                                            padding=self.padding)
         labels = []
+        position_ids = []
+        pos_ids = [i for i in range(self.max_length)]
         j = 0
         for i, label in enumerate(examples_[f"ner_tags"]):
             word_ids = tokenized_inputs.word_ids(batch_index=j)
@@ -75,18 +78,26 @@ class NERProcessor(object):
                     j += 1
             j += 1
 
+
         # Extract mapping between new and old indices
         sample_map = tokenized_inputs.pop("overflow_to_sample_mapping", None)
         if sample_map is not None:
             for key, values in examples_.items():
                 tokenized_inputs[key] = [values[i] for i in sample_map]
         tokenized_inputs["labels"] = labels
+        for i, input_ids in tokenized_inputs["input_ids"]:
+            if duplicate and duplicate_mode=="shift":
+                shifted_pos = pos_ids
+                shifted_pos[1:len(label)] = [p + (k*len(label)) for p in pos_ids[1:len(label)]]
+            # numpy.where(numpy.array(tokenized_inputs["input_ids"][0]) !=0)
         return tokenized_inputs
 
 
-def duplicate_seq(features, k=2):
-    tokens = [k * x for x in features["tokens"]]
-    tags = [k * x for x in features["ner_tags"]]
+def duplicate_seq(features, k=2, mode="none", sep_token="[SEP]"):
+    sep = [sep_token] if mode == "sep" else []
+    tag = [-100] if mode == "sep" else []
+    tokens = [(k * (x + sep))[:-1] for x in features["tokens"]]
+    tags = [(k * (x + tag))[:-1] for x in features["ner_tags"]]
     k_ = [[k] for x in features["ner_tags"]]
     return {"id": [str(i) for i in range(len(tokens))],
             "tokens": tokens,
@@ -125,16 +136,18 @@ def concatenate_seq(features, length=None):
     return {}
 
 
-def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2):
+def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2, mode="none"):
     # ToDo concatenate test, and permutate random words?
     features_ = examples.data
     if concatenate:
-        # Concatenate sequences
+        # ToDo Concatenate sequences
         data = concatenate_seq(features_, length=max_length)
         examples.data = data
     if duplicate:
-        data = duplicate_seq(features_, k=k)
-        examples.data = data
+        if mode in ["none", "sep"]:
+            data = duplicate_seq(features_, k=k, mode=mode, sep_token="[SEP]")
+            examples.data = data
+
     return examples
 
 
@@ -148,8 +161,8 @@ if __name__ == '__main__':
 
     for k in range(1, 11):
         test_dataset = conll03.dataset["test_"].map(ner_processor.tokenize_and_align_labels,
-                                                   fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
-                                                   batched=True)
+                                                    fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
+                                                    batched=True)
         print(test_dataset[0])
 
     tokenized_datasets = conll03.dataset.map(ner_processor.tokenize_and_align_labels, batched=True)

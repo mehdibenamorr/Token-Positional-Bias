@@ -63,9 +63,14 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
                         )
+    parser.add_argument('--duplicate_mode', type=str, default="none", choices=["none","shift", "sep"],
+                        help='Mode of duplication: possible values are, "none", "shift" (position_ids), '
+                             'and "sep" (adding [SEP] token))',
+                        )
     parser.add_argument('--watch_attentions', action="store_true",
                         help='If set, attention scores will be logged',
                         )
+    parser.add_argument('--batch_size', default=64, type=int, help='Number of epochs during training')
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '
                              '"relative_key_query". For positional embeddings use "absolute". For more information '

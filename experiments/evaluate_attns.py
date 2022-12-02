@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 # file: evaluate_attns.py
 #
-import inspect
-import tempfile
-
-from torch.utils.data import DataLoader, SequentialSampler
-
 from utils import set_random_seed
 
 set_random_seed(23456)
@@ -25,8 +20,14 @@ from transformers import Trainer, TrainingArguments
 from datasets import Dataset
 import wandb
 from transformers.trainer import logger
+import inspect
+import tempfile
+from torch.utils.data import DataLoader, SequentialSampler
 
 os.environ['WANDB_LOG_MODEL'] = "true"
+
+# Fix for warning :The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 # os.environ['WANDB_DISABLED'] = "true"
@@ -44,7 +45,7 @@ class BertForNEREval(Trainer):
 
         training_args = TrainingArguments(
             self.model_path,
-            per_device_eval_batch_size=1,
+            per_device_eval_batch_size=all_args.batch_size,
             do_predict=True,
             report_to=["none"],
             logging_strategy="no"
@@ -82,7 +83,7 @@ class BertForNEREval(Trainer):
 
     def eval_attn(self,
                   test_dataset: Optional[Dataset],
-                  ) :
+                  ):
         # dataloader = self.get_test_dataloader(test_dataset=test_dataset)
         test_sampler = SequentialSampler(test_dataset)
         dataloader = DataLoader(
@@ -156,7 +157,8 @@ def main():
         if args.duplicate:
             for k in range(1, 11):
                 test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                            fn_kwargs={"duplicate": args.duplicate, "k": k},
+                                                            fn_kwargs={"duplicate": args.duplicate, "k": k,
+                                                                       "duplicate_mode": args.duplicate_mode},
                                                             load_from_cache_file=False, batched=True)
 
                 task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
