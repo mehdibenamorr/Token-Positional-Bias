@@ -77,7 +77,7 @@ class DataCollator(DataCollatorMixin):
             ]
         batch_ = {}
         for k, v in batch.items():
-            if k in ["input_ids", "token_type_ids", "attention_mask", "labels"]:
+            if k in ["input_ids", "token_type_ids", "attention_mask", "labels", "position_ids"]:
                 batch_.update({k: torch.tensor(v, dtype=torch.int64)})
             else:
                 batch_.update({k: v})
