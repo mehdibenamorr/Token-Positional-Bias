@@ -33,12 +33,12 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     else:
         parser = argparse.ArgumentParser()
 
-    parser.add_argument('-model', type=str, default='bert-base-uncased',
+    parser.add_argument('--model', type=str, default='bert-base-uncased',
                         help='Name of a specific model previously saved inside "models" folder'
                              ' or name of an HuggingFace model')
-    parser.add_argument('-wandb_user', type=str, default='benamor',
+    parser.add_argument('--wandb_user', type=str, default='benamor',
                         help='Name of the WandB account where the models are stored')
-    parser.add_argument('-wandb_dir', type=str, default='.wandb',
+    parser.add_argument('--wandb_dir', type=str, default='.wandb',
                         help='Local directory of the WandB where the logs are stored')
     parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')

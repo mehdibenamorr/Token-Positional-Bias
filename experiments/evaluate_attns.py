@@ -132,6 +132,7 @@ def main():
     args = parser.parse_args()
     experiment_name = f"{args.experiment}-{args.dataset}"
     entity = args.wandb_user
+    os.environ["WANDB_DIR"] = args.wandb_dir
     api = wandb.Api()
     experiment_ref = f"bert_position_bias_no_cv-{args.dataset}"
     runs = api.runs(entity + "/" + experiment_ref)
