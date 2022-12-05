@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader, SequentialSampler
 os.environ['WANDB_LOG_MODEL'] = "true"
 
 # Fix for warning :The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 # os.environ['WANDB_DISABLED'] = "true"
@@ -46,7 +46,6 @@ class BertForNEREval(Trainer):
         training_args = TrainingArguments(
             self.model_path,
             per_device_eval_batch_size=all_args.batch_size,
-            do_predict=True,
             report_to=["wandb"]
         )
         self.dataset = dataset
@@ -57,8 +56,8 @@ class BertForNEREval(Trainer):
         # Model loading
         bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
                                                                        watch_attentions=self.watch_attentions,
-                                                                       output_attentions=True,
-                                                                       output_hidden_states=True)
+                                                                       output_attentions=self.watch_attentions,
+                                                                       output_hidden_states=self.watch_attentions)
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
