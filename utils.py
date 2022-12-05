@@ -38,6 +38,8 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
                              ' or name of an HuggingFace model')
     parser.add_argument('-wandb_user', type=str, default='benamor',
                         help='Name of the WandB account where the models are stored')
+    parser.add_argument('-wandb_dir', type=str, default='.wandb',
+                        help='Local directory of the WandB where the logs are stored')
     parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')
     parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])

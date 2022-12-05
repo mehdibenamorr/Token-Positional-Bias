@@ -21,13 +21,12 @@ export PYTHONPATH="$PYTHONPATH:$REPO"
 
 
 python ${REPO}/experiments/evaluate_attns.py \
---output_dir=${OUTPUT_DIR} \
+--wandb_dir=${OUTPUT_DIR} \
 --dataset=${DATASET} \
 --experiment=${EXPERIMENT} \
 --max_length=${MAX_LENGTH} \
 --padding=${PADDING} \
 --padding_side=${PADDING_SIDE} \
---seed=${SEED} \
 --truncation \
 --duplicate \
 --duplicate_mode ${MODE}
