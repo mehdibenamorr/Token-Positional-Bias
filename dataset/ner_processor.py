@@ -4,6 +4,7 @@
 #
 
 from transformers import AutoTokenizer
+import numpy as np
 
 
 class NERProcessor(object):
@@ -61,8 +62,8 @@ class NERProcessor(object):
                                            return_overflowing_tokens=self.return_truncated_tokens,
                                            padding=self.padding)
         labels = []
-        position_ids = []
-        pos_ids = [i for i in range(self.max_length)]
+
+
         j = 0
         for i, label in enumerate(examples_[f"ner_tags"]):
             word_ids = tokenized_inputs.word_ids(batch_index=j)
@@ -78,18 +79,23 @@ class NERProcessor(object):
                     j += 1
             j += 1
 
-
         # Extract mapping between new and old indices
         sample_map = tokenized_inputs.pop("overflow_to_sample_mapping", None)
         if sample_map is not None:
             for key, values in examples_.items():
                 tokenized_inputs[key] = [values[i] for i in sample_map]
         tokenized_inputs["labels"] = labels
-        for i, input_ids in tokenized_inputs["input_ids"]:
-            if duplicate and duplicate_mode=="shift":
-                shifted_pos = pos_ids
-                shifted_pos[1:len(label)] = [p + (k*len(label)) for p in pos_ids[1:len(label)]]
-            # numpy.where(numpy.array(tokenized_inputs["input_ids"][0]) !=0)
+
+        if duplicate and duplicate_mode == "shift":
+            pos_ids = [i for i in range(self.max_length)]
+            position_ids = []
+            for i, input_ids in enumerate(tokenized_inputs["input_ids"]):
+                (indices,) = np.array(input_ids).nonzero()
+                indices = indices[1:]
+                shifted_pos = np.array(pos_ids)
+                shifted_pos[indices] += (k-1)*len(indices)
+                position_ids.append(shifted_pos.tolist())
+            tokenized_inputs["position_ids"] = position_ids
         return tokenized_inputs
 
 

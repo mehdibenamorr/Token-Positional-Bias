@@ -15,7 +15,7 @@ from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
 from dataset.collate_fn import DataCollator
 import torch
-from metrics.ner_f1 import ner_span_metrics
+from metrics.ner_f1 import ner_span_metrics, compute_ner_pos_f1
 from transformers import Trainer, TrainingArguments
 from datasets import Dataset
 import wandb
@@ -47,8 +47,7 @@ class BertForNEREval(Trainer):
             self.model_path,
             per_device_eval_batch_size=all_args.batch_size,
             do_predict=True,
-            report_to=["none"],
-            logging_strategy="no"
+            report_to=["wandb"]
         )
         self.dataset = dataset
         self.processor = processor
@@ -72,13 +71,18 @@ class BertForNEREval(Trainer):
              test_dataset: Optional[Dataset] = None,
              ignore_keys: Optional[List[str]] = None,
              k: Optional[int] = None,
+             duplicate_mode: Optional[str] = "none",
              metric_key_prefix: str = "test",
              ) -> Dict[str, float]:
-        self.compute_metrics = lambda p: ner_span_metrics(all_preds_scores=p.predictions,
-                                                          all_labels=p.label_ids,
-                                                          all_inputs=p.inputs,
-                                                          label_list=self.dataset.labels,
-                                                          k=k)
+        if k is None or duplicate_mode == "shift":
+            self.compute_metrics = lambda p: compute_ner_pos_f1(p=p,
+                                                                label_list=self.dataset.labels)
+        else:
+            self.compute_metrics = lambda p: ner_span_metrics(all_preds_scores=p.predictions,
+                                                              all_labels=p.label_ids,
+                                                              all_inputs=p.inputs,
+                                                              label_list=self.dataset.labels,
+                                                              k=k)
         return super().evaluate(eval_dataset=test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
     def eval_attn(self,
@@ -161,7 +165,7 @@ def main():
                                                                        "duplicate_mode": args.duplicate_mode},
                                                             load_from_cache_file=False, batched=True)
 
-                task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
+                task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k, duplicate_mode=args.duplicate_mode)
         elif args.watch_attentions:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
                                                         fn_kwargs={"duplicate": True, "k": 10},

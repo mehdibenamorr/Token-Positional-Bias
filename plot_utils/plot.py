@@ -413,6 +413,51 @@ def bias_experiment_k(dataset="conll03"):
     f.savefig(os.path.join(save_dir, 'heatmap_batch_total_pos.pdf'))
     plt.close()
 
+    # Correct and total agreement per class
+    for cls in labels:
+        correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.correct",
+                                                aggfunc=np.mean)
+        matrix = correct_batch_pos_mean.values
+        upper_indices = np.triu_indices(matrix.shape[1])
+        matrix[upper_indices] = matrix.T[upper_indices]
+        correct_batch_pos_mean.iloc[:, :] = matrix
+        correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.correct",
+                                               aggfunc=np.std)
+        matrix = correct_batch_pos_std.values
+        matrix[upper_indices] = matrix.T[upper_indices]
+        correct_batch_pos_std.iloc[:, :] = matrix
+        f, ax = plt.subplots(figsize=(5, 3.75))
+        sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values, robust=True,
+                    annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
+        # locs, labels = plt.xticks()
+        # labels[0] = plt.Text(0.5, 0, "all")
+        # plt.xticks(locs, labels)
+        ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
+        f.savefig(os.path.join(save_dir, f'{cls}_heatmap_correct_pos.pdf'))
+        plt.close()
+
+        correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.total",
+                                                aggfunc=np.mean)
+        matrix = correct_batch_pos_mean.values
+        upper_indices = np.triu_indices(matrix.shape[1])
+        matrix[upper_indices] = matrix.T[upper_indices]
+        correct_batch_pos_mean.iloc[:, :] = matrix
+        correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.total",
+                                               aggfunc=np.std)
+        matrix = correct_batch_pos_std.values
+        matrix[upper_indices] = matrix.T[upper_indices]
+        correct_batch_pos_std.iloc[:, :] = matrix
+        f, ax = plt.subplots(figsize=(5, 3.75))
+        sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values, robust=True,
+                    annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
+        # locs, labels = plt.xticks()
+        # labels[0] = plt.Text(0.5, 0, "all")
+        # plt.xticks(locs, labels)
+        ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
+        f.savefig(os.path.join(save_dir, f'{cls}_heatmap_correct_pos.pdf'))
+        plt.close()
+
+
     # Line Plots
     ## F1 performance of all classes per batch position
     for cls in labels:

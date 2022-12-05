@@ -70,7 +70,7 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--watch_attentions', action="store_true",
                         help='If set, attention scores will be logged',
                         )
-    parser.add_argument('--batch_size', default=64, type=int, help='Number of epochs during training')
+    parser.add_argument('--batch_size', default=64, type=int, help='batch size when evaluating')
     parser.add_argument('--position_embedding_type', default='absolute',
                         help=' Type of position embedding. Choose one of "absolute", "relative_key", '
                              '"relative_key_query". For positional embeddings use "absolute". For more information '
