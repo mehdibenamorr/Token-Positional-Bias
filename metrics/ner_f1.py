@@ -267,26 +267,26 @@ def compute_ner_pos_f1(p, label_list):
         for prediction, label in zip(predictions, labels)
     ]
     results = metric.compute(predictions=true_predictions, references=true_labels)
-    keys = list(results.keys())
 
-    pos_dist = []
-    for l in keys:
-        if isinstance(results[l], dict):
-            positions = []
-            for sample in true_labels:
-                positions += _find_class_pos(sample, l)
-            pos_dist += [(x, l, str(results[l]["f1"] * 100)[:6]) for x in positions]
-            # data_dict = {'positions': pd.Series(positions)}
-            table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
-            results[l].update({"positions_distribution": table})
-    position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
-    try:
-        f = plot_pos_dist(position_dist)
-
-        results.update({
-            "pos_dist": f})
-    except Exception as e:
-        print(f"plot pos dist failed due to exception{e}")
+    # keys = list(results.keys())
+    # pos_dist = []
+    # for l in keys:
+    #     if isinstance(results[l], dict):
+    #         positions = []
+    #         for sample in true_labels:
+    #             positions += _find_class_pos(sample, l)
+    #         pos_dist += [(x, l, str(results[l]["f1"] * 100)[:6]) for x in positions]
+    #         # data_dict = {'positions': pd.Series(positions)}
+    #         table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
+    #         results[l].update({"positions_distribution": table})
+    # position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
+    # try:
+    #     f = plot_pos_dist(position_dist)
+    #
+    #     results.update({
+    #         "pos_dist": f})
+    # except Exception as e:
+    #     print(f"plot pos dist failed due to exception{e}")
 
     return results
 
@@ -318,26 +318,26 @@ def ner_span_metrics(all_preds_scores, all_labels, all_inputs, label_list, k):
     ]
 
     results = metric.compute(predictions=true_predictions, references=true_labels)
-    keys = list(results.keys())
 
-    pos_dist = []
-    for l in keys:
-        if isinstance(results[l], dict):
-            positions = []
-            for sample in true_labels:
-                positions += _find_class_pos(sample, l)
-            pos_dist += [(x, l, str(results[l]["f1"] * 100)[:6]) for x in positions]
-            # data_dict = {'positions': pd.Series(positions)}
-            table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
-            results[l].update({"positions_distribution": table})
-    position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
-    try:
-        f = plot_pos_dist(position_dist)
-
-        results.update({
-            "pos_dist": f})
-    except Exception as e:
-        print(f"plot pos dist failed due to exception{e}")
+    # keys = list(results.keys())
+    # pos_dist = []
+    # for l in keys:
+    #     if isinstance(results[l], dict):
+    #         positions = []
+    #         for sample in true_labels:
+    #             positions += _find_class_pos(sample, l)
+    #         pos_dist += [(x, l, str(results[l]["f1"] * 100)[:6]) for x in positions]
+    #         # data_dict = {'positions': pd.Series(positions)}
+    #         table = wandb.Table(data=[[a] for a in positions], columns=["positions"])
+    #         results[l].update({"positions_distribution": table})
+    # position_dist = pd.DataFrame(pos_dist, columns=["position", "class", "f1"])
+    # try:
+    #     f = plot_pos_dist(position_dist)
+    #
+    #     results.update({
+    #         "pos_dist": f})
+    # except Exception as e:
+    #     print(f"plot pos dist failed due to exception{e}")
 
     results_per_k = metric.compute(predictions=true_predictions, references=true_labels, consistency=True, k=k)
 

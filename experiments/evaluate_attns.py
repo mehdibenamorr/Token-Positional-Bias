@@ -46,6 +46,7 @@ class BertForNEREval(Trainer):
         training_args = TrainingArguments(
             self.model_path,
             per_device_eval_batch_size=all_args.batch_size,
+            include_inputs_for_metrics=True,
             report_to=["wandb"]
         )
         self.dataset = dataset

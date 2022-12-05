@@ -85,7 +85,7 @@ class NERDatasetbuilder(datasets.GeneratorBasedBuilder):
         elif dataset == "conll03":
             return ["O", "S-MISC", "B-MISC", "I-MISC", "E-MISC", "S-ORG", "B-ORG", "I-ORG", "E-ORG", "S-LOC", "B-LOC",
                     "I-LOC", "E-LOC", "S-PER", "B-PER", "I-PER", "E-PER"]
-        return ["0", "1"]
+        raise ValueError(f"Dataset {dataset} is not configured. Available datasets are {CONFIGS.keys()}.")
 
     def _info(self):
         return datasets.DatasetInfo(
@@ -229,27 +229,6 @@ class NERDataset(object):
 
     def data(self):
         return self._dataset["all_"]
-
-
-from torch.utils.data import Dataset
-
-
-class TruncateDataset(Dataset):
-    """Truncate dataset to certain num"""
-
-    def __init__(self, dataset, max_num: int = 100):
-        self.dataset = dataset
-        self.max_num = min(max_num, len(self.dataset))
-
-    def __len__(self):
-        return self.max_num
-
-    def __getitem__(self, item):
-        return self.dataset[item]
-
-    def __getattr__(self, item):
-        """other dataset func"""
-        return getattr(self.dataset, item)
 
 
 if __name__ == '__main__':

@@ -15,4 +15,6 @@ dependencies:
     - seaborn==0.12.1
     - seqeval==1.2.2
     - scikit-learn==1.1.2
+    - plotly==5.11.0
+    - conllu==4.5.2
 
