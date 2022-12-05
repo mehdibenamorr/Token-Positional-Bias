@@ -31,6 +31,6 @@ python ${REPO}/experiments/evaluate_attns.py \
 --optim ${OPTIMIZER} \
 --truncation \
 --debugging \
---batch_size ${BATCH_SIZE} \
+--batch_size=${BATCH_SIZE} \
 --watch_attentions
 

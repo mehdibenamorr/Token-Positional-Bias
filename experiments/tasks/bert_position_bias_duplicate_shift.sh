@@ -4,7 +4,7 @@
 #Eval ARGS
 SEED=23456
 MAX_LENGTH=512
-
+EVAL_BATCH_SIZE=64
 PADDING=max_length
 PADDING_SIDE=right
 
@@ -29,5 +29,6 @@ python ${REPO}/experiments/evaluate_attns.py \
 --padding_side=${PADDING_SIDE} \
 --truncation \
 --duplicate \
---duplicate_mode ${MODE}
+--duplicate_mode=${MODE} \
+--batch_size=${EVAL_BATCH_SIZE}
 
