@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sns
 import wandb
 import os
+import torch
 
 from matplotlib.offsetbox import AnchoredText
 
@@ -457,7 +458,6 @@ def bias_experiment_k(dataset="conll03"):
         f.savefig(os.path.join(save_dir, f'{cls}_heatmap_correct_pos.pdf'))
         plt.close()
 
-
     # Line Plots
     ## F1 performance of all classes per batch position
     for cls in labels:
@@ -474,7 +474,7 @@ def bias_experiment_k(dataset="conll03"):
         ax.add_artist(at)
         ax.set(ylabel=f"F1({cls})", xlabel='Batch(k) Position')
         # Per k factor
-        f.savefig(os.path.join(save_dir ,f'{cls}_f1_pos.pdf'))
+        f.savefig(os.path.join(save_dir, f'{cls}_f1_pos.pdf'))
         f, ax = plt.subplots(figsize=(3.54, 2.65))
         at = AnchoredText(
             f"Support: {batch_number}", prop=dict(size=15), frameon=True, loc='upper right')
@@ -486,7 +486,7 @@ def bias_experiment_k(dataset="conll03"):
                         fontsize="xx-small")
         ax.set(ylabel=f"F1({cls})", xlabel=r'$k$')
         ax.add_artist(at)
-        f.savefig(os.path.join(save_dir ,f'{cls}_f1_k.pdf'))
+        f.savefig(os.path.join(save_dir, f'{cls}_f1_k.pdf'))
     plt.close()
 
     ## F1 performance of all classes per k across all positions
@@ -537,8 +537,10 @@ def bias_experiment_k(dataset="conll03"):
     ax.minorticks_off()
     f.savefig(os.path.join(save_dir, 'heatmap_class_f1_pos.pdf'))
     # Heatmap of classes / k
-    class_batch_pos_mean = class_df[class_df["batch_pos"]==0].pivot_table(index="class", columns="k", values="f1", aggfunc=np.mean)
-    class_batch_pos_std = class_df[class_df["batch_pos"]==0].pivot_table(index="class", columns="k", values="f1", aggfunc=np.std)
+    class_batch_pos_mean = class_df[class_df["batch_pos"] == 0].pivot_table(index="class", columns="k", values="f1",
+                                                                            aggfunc=np.mean)
+    class_batch_pos_std = class_df[class_df["batch_pos"] == 0].pivot_table(index="class", columns="k", values="f1",
+                                                                           aggfunc=np.std)
     f, ax = plt.subplots(figsize=(5, 3.75))
     sns.heatmap(data=class_batch_pos_std * 100, annot=class_batch_pos_mean.values * 100, fmt=".2f", robust=True,
                 annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
@@ -550,8 +552,41 @@ def bias_experiment_k(dataset="conll03"):
     plt.close()
 
 
+def attn_analysis(dataset="conll03"):
+    experiment = "bert_position_bias_eval"
+    save_dir = os.path.join(plots_dir, experiment, dataset)
+    os.makedirs(save_dir, exist_ok=True)
+    labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    labels = list(np.unique([l.split("-")[-1] for l in labels]))
+    labels.remove("O")
+    entity = "benamor"  # set to your entity and project
+    runs = api.runs(entity + "/" + experiment + "-" + dataset)
+
+    position_cosine_df = []
+    word_cosine_df = []
+    attention_df = []
+    general_info = []
+    for run in runs:
+        # .summary contains the output keys/values for metrics like accuracy.
+        #  We call ._json_dict to omit large files
+        if run.state == "finished":
+            file_path = wandb.restore("results.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            _results = torch.load(file_path.name)
+            for seq in _results:
+                cos_sim = seq.pop("cos_sim")
+                attentions = seq.pop("attentions")
+                general_info.append(seq)
+                # Cosine similaritiy df construction:
+                # Position cosine
+                pos_cos = cos_sim.pop("positions_cosine")
+                word_cos = cos_sim.pop("words_cosine")
+
+            print("here")
+
+
 if __name__ == "__main__":
     # dataset_plot()
     # bias_experiment()
     # bias_experiment_k(dataset="conll03")
-    bias_experiment_k(dataset="ontonotes5")
+    # bias_experiment_k(dataset="ontonotes5")
+    attn_analysis(dataset="conll03")

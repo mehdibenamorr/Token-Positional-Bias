@@ -248,7 +248,7 @@ if __name__ == '__main__':
     print(dataset['test'])
     print(dataset['validation'])
 
-    print("List of tags: ", dataset['train'].features['ner_tags'].feature.names)
+    print("List of tags: ", dataset['train'].features['pos_tags'].feature.names)
 
     print("First sample: ", dataset['train'][80])
 

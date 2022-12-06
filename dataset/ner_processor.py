@@ -100,10 +100,12 @@ class NERProcessor(object):
 
 
 def duplicate_seq(features, k=2, mode="none", sep_token="[SEP]"):
-    sep = [sep_token] if mode == "sep" else []
-    tag = [-100] if mode == "sep" else []
-    tokens = [(k * (x + sep))[:-1] for x in features["tokens"]]
-    tags = [(k * (x + tag))[:-1] for x in features["ner_tags"]]
+    if mode=="sep":
+        tokens = [(k * (x + [sep_token]))[:-1] for x in features["tokens"]]
+        tags = [(k * (x + [-100]))[:-1] for x in features["ner_tags"]]
+    else:
+        tokens = [k * x for x in features["tokens"]]
+        tags = [k * x for x in features["ner_tags"]]
     k_ = [[k] for x in features["ner_tags"]]
     return {"id": [str(i) for i in range(len(tokens))],
             "tokens": tokens,
