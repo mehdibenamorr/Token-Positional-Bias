@@ -182,8 +182,8 @@ class BertForTokenClassification(BertPreTrainedModel):
             attention_scores = self_attention_scores.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
             attention_probs = self_attention_probs.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
 
-            attn_dict.update({f"layer_attn_{i}": {"attention_scores": attention_scores,
-                                                  "attention_probs": attention_probs}})
+            attn_dict.update({f"layer_attn_{i}": {"attention_scores": attention_scores.detach().cpu().numpy(),
+                                                  "attention_probs": attention_probs.detach().cpu().numpy()}})
 
             # This is actually dropping out entire tokens to attend to, which might
             # seem a bit unusual, but is taken from the original Transformer paper.

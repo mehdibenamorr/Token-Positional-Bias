@@ -573,15 +573,20 @@ def attn_analysis(dataset="conll03"):
             file_path = wandb.restore("results.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
             _results = torch.load(file_path.name)
             for seq in _results:
+                general_info.append(seq)
                 cos_sim = seq.pop("cos_sim")
                 attentions = seq.pop("attentions")
-                general_info.append(seq)
+
                 # Cosine similaritiy df construction:
                 # Position cosine
                 pos_cos = cos_sim.pop("positions_cosine")
                 word_cos = cos_sim.pop("words_cosine")
 
-            print("here")
+                # Attention df (Layer 12)
+                print("here")
+
+
+
 
 
 if __name__ == "__main__":

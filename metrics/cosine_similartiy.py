@@ -68,8 +68,8 @@ def cosine_similarity(word_embeds: torch.FloatTensor,
                 cosine_words[f"word_sim_k={i + 1}"].append(layer_word_similarty)
 
     # cosine metric : (seq_len, layers)
-    cosine_positions = {k: torch.transpose(torch.stack(v), 0, 1) for k, v in cosine_positions.items()}
-    cosine_words = {k: torch.transpose(torch.stack(v), 0, 1) for k, v in cosine_words.items()}
+    cosine_positions = {k: torch.transpose(torch.stack(v), 0, 1).detach().cpu().numpy() for k, v in cosine_positions.items()}
+    cosine_words = {k: torch.transpose(torch.stack(v), 0, 1).detach().cpu().numpy() for k, v in cosine_words.items()}
 
     output = {'positions_cosine': cosine_positions, 'words_cosine': cosine_words}
 

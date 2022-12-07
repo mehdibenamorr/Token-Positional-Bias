@@ -8,7 +8,7 @@ src/hyperparameter_optimization/data/pamap.pkl
 # Created folders
 plots/*
 */plots/*
-*/artifacts/*
+*artifacts/*
 */wandb/*
 
 ## Standard Files from sharing
