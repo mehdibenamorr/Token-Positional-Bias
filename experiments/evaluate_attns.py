@@ -103,7 +103,11 @@ class BertForNEREval(Trainer):
         logger.info(f"  Num examples = {self.num_examples(dataloader)}")
         batch_size = self.args.eval_batch_size
         logger.info(f"  Batch size = {batch_size}")
-        results = []
+        sequence_info = []
+        attention_scores = []
+        raw_attention_scores = []
+        positions_cosine = []
+        words_cosine = []
         for step, inputs in enumerate(dataloader):
             # Inspect model forward signature to keep only the arguments it accepts.
             signature = inspect.signature(self.model.dissected_feed_forward)
@@ -116,14 +120,32 @@ class BertForNEREval(Trainer):
                 outputs = self.model.dissected_feed_forward(**fwd_inputs, return_dict=False)
             cos_results = outputs[-2]
             attn_dict = outputs[-1]
-            results.append({"id": inputs["id"][0], "tokens": inputs["original_tokens"][0],
-                            "labels": [self.dataset.id2label[l] for l in inputs["original_tags"][0]],
-                            "cos_sim": cos_results,
-                            "attentions": attn_dict})
+            sequence_info.append({"id": inputs["id"][0], "tokens": inputs["original_tokens"][0],
+                            "labels": [self.dataset.id2label[l] for l in inputs["original_tags"][0]]})
+            attention_scores.append(attn_dict["attention_probs"])
+            raw_attention_scores.append(attn_dict["attention_scores"])
+            positions_cosine.append(cos_results["positions_cosine"])
+            words_cosine.append(cos_results["words_cosine"])
         tempdir = tempfile.TemporaryDirectory()
-        res_file = os.path.join(tempdir.name, "results.pt")
-        torch.save(results, res_file)
-        wandb.save(res_file, policy="now")
+        seq_file = os.path.join(tempdir.name, "seq_info.pt")
+        torch.save(sequence_info, seq_file)
+        wandb.save(seq_file, policy="now")
+
+        attn_scores = os.path.join(tempdir.name, "attention_scores.pt")
+        torch.save(attention_scores, attn_scores)
+        wandb.save(seq_file, policy="now")
+
+        attn_raw = os.path.join(tempdir.name, "attention_raw.pt")
+        torch.save(raw_attention_scores, attn_raw)
+        wandb.save(seq_file, policy="now")
+
+        position_cosine = os.path.join(tempdir.name, "pos_cos.pt")
+        torch.save(positions_cosine, position_cosine)
+        wandb.save(seq_file, policy="now")
+
+        word_cosine = os.path.join(tempdir.name, "word_cos.pt")
+        torch.save(words_cosine, word_cosine)
+        wandb.save(seq_file, policy="now")
         return tempdir
 
 
