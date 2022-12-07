@@ -153,7 +153,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         hidden_states = embedding_output
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
-        attn_dict = {}
+        attn_dict = {"attention_probs": {}, "attention_scores": {}}
         embs_dict = {}
         for i, layer_module in enumerate(self.bert.encoder.layer):
             if output_hidden_states:
