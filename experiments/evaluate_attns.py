@@ -133,19 +133,19 @@ class BertForNEREval(Trainer):
 
         attn_scores = os.path.join(tempdir.name, "attention_scores.pt")
         torch.save(attention_scores, attn_scores)
-        wandb.save(seq_file, policy="now")
+        wandb.save(attn_scores, policy="now")
 
         attn_raw = os.path.join(tempdir.name, "attention_raw.pt")
         torch.save(raw_attention_scores, attn_raw)
-        wandb.save(seq_file, policy="now")
+        wandb.save(attn_raw, policy="now")
 
         position_cosine = os.path.join(tempdir.name, "pos_cos.pt")
         torch.save(positions_cosine, position_cosine)
-        wandb.save(seq_file, policy="now")
+        wandb.save(position_cosine, policy="now")
 
         word_cosine = os.path.join(tempdir.name, "word_cos.pt")
         torch.save(words_cosine, word_cosine)
-        wandb.save(seq_file, policy="now")
+        wandb.save(word_cosine, policy="now")
         return tempdir
 
 
