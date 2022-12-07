@@ -562,28 +562,20 @@ def attn_analysis(dataset="conll03"):
     entity = "benamor"  # set to your entity and project
     runs = api.runs(entity + "/" + experiment + "-" + dataset)
 
-    position_cosine_df = []
-    word_cosine_df = []
     attention_df = []
     general_info = []
     for run in runs:
         # .summary contains the output keys/values for metrics like accuracy.
         #  We call ._json_dict to omit large files
         if run.state == "finished":
-            file_path = wandb.restore("results.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
-            _results = torch.load(file_path.name)
-            for seq in _results:
-                general_info.append(seq)
-                cos_sim = seq.pop("cos_sim")
-                attentions = seq.pop("attentions")
+            seq_path = wandb.restore("seq_info.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            seq_info = torch.load(seq_path.name)
+            attn_path = wandb.restore("attention_scores.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            attention_scores = torch.load(attn_path.name)
+            for i, attns in enumerate(attention_scores):
+                for layer, attn_scores in enumerate(attns.items):
 
-                # Cosine similaritiy df construction:
-                # Position cosine
-                pos_cos = cos_sim.pop("positions_cosine")
-                word_cos = cos_sim.pop("words_cosine")
-
-                # Attention df (Layer 12)
-                print("here")
+                    print("here")
 
 
 
