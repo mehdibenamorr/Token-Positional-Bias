@@ -179,15 +179,15 @@ class BertForTokenClassification(BertPreTrainedModel):
             # Normalize the attention scores to probabilities.
             self_attention_probs = nn.functional.softmax(self_attention_scores, dim=-1)
 
-            attention_scores = self_attention_scores.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
-            attention_probs = self_attention_probs.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
-
-            attn_dict.update({f"layer_attn_{i}": {"attention_scores": attention_scores.detach().cpu().numpy(),
-                                                  "attention_probs": attention_probs.detach().cpu().numpy()}})
-
             # This is actually dropping out entire tokens to attend to, which might
             # seem a bit unusual, but is taken from the original Transformer paper.
             self_attention_probs = layer_module.attention.self.dropout(self_attention_probs)
+
+            attention_scores = self_attention_scores.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
+            attention_probs = self_attention_probs.squeeze(0)[:, sequence_mask, :][:, :, sequence_mask]
+
+            attn_dict["attention_probs"].update({f"layer_{i + 1}": attention_probs.detach().cpu().numpy()})
+            attn_dict["attention_scores"].update({f"layer_{i + 1}": attention_scores.detach().cpu().numpy()})
 
             # Mask heads if we want to
             if layer_head_mask is not None:
