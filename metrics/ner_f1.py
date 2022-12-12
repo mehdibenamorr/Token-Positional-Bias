@@ -17,7 +17,7 @@
 # limitations under the License.
 """\
 seqeval is a Python framework for sequence labeling evaluation.
-seqeval can evaluate the performance of chunking tasks such as named-entity recognition, part-of-speech tagging, semantic role labeling and so on.
+seqeval can evaluate the performance of chunking scripts such as named-entity recognition, part-of-speech tagging, semantic role labeling and so on.
 
 This is well-tested by using the Perl script conlleval, which can be used for
 measuring the performance of a system that has processed the CoNLL-2000 shared task data.
@@ -68,7 +68,7 @@ _CITATION = """\
 
 _DESCRIPTION = """\
 seqeval is a Python framework for sequence labeling evaluation.
-seqeval can evaluate the performance of chunking tasks such as named-entity recognition, part-of-speech tagging, semantic role labeling and so on.
+seqeval can evaluate the performance of chunking scripts such as named-entity recognition, part-of-speech tagging, semantic role labeling and so on.
 
 This is well-tested by using the Perl script conlleval, which can be used for
 measuring the performance of a system that has processed the CoNLL-2000 shared task data.

@@ -79,7 +79,8 @@ class POSDatasetbuilder(datasets.GeneratorBasedBuilder):
         self._dev_file_ = f"{self._dev_file}.cut"
         self._test_file = f"{dataset}{test_file}"
         self._test_file_ = f"{self._test_file}.cut"
-        self._all_file = f"{all_file}.cut"
+        self._all_file_ = f"{dataset}{all_file}"
+        self._all_file = f"{self._all_file_}.cut"
         self.debugging = debugging
         self.limit = 100
         super(POSDatasetbuilder, self).__init__(*args, cache_dir=cache_dir, **kwargs)
@@ -171,7 +172,7 @@ class POSDatasetbuilder(datasets.GeneratorBasedBuilder):
                     idx = guid
 
                 yield guid, {
-                    "idx": str(idx),
+                    "id": str(idx),
                     "tokens": [token["form"] for token in sent],
                     "pos_tags": [token["upos"] for token in sent],
                 }
@@ -206,7 +207,7 @@ class POSDataset(object):
 
     @property
     def labels(self) -> ClassLabel:
-        return self._dataset['train'].features['ner_tags'].feature.names
+        return self._dataset['train'].features['pos_tags'].feature.names
 
     @property
     def id2label(self):
@@ -242,7 +243,7 @@ class POSDataset(object):
 
 
 if __name__ == '__main__':
-    dataset = POSDataset().dataset
+    dataset = POSDataset(dataset="tweebank").dataset
 
     print(dataset['train'])
     print(dataset['test'])
