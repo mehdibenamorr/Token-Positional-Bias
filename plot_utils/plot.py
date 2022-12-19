@@ -577,6 +577,73 @@ def attn_analysis(dataset="conll03"):
 
                     print("here")
 
+def emb_analysis(dataset="conll03"):
+    experiment = "bert_position_bias_eval"
+    save_dir = os.path.join(plots_dir, experiment, dataset)
+    os.makedirs(save_dir, exist_ok=True)
+    labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    labels = list(np.unique([l.split("-")[-1] for l in labels]))
+    labels.remove("O")
+    entity = "benamor"  # set to your entity and project
+    runs = api.runs(entity + "/" + experiment + "-" + dataset)
+
+
+    df = []
+    df1 = []
+    general_info = []
+    for run in runs:
+        # .summary contains the output keys/values for metrics like accuracy.
+        #  We call ._json_dict to omit large files
+        if run.state == "finished":
+            pos_df = []
+            word_df = []
+            seq_path = wandb.restore("seq_info.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            seq_info = torch.load(seq_path.name)
+            pos_cos_path = wandb.restore("pos_cos.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            word_cos_path = wandb.restore("word_cos.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            pos_embeddings = torch.load(pos_cos_path.name)
+            word_embeddings = torch.load(word_cos_path.name)
+            for i, embs in enumerate(pos_embeddings):
+                for k, emb_cos in embs.items():
+                    first_token = emb_cos[0,:]
+                    avg_token = emb_cos.mean(axis=0)
+                    for j, cos_sim in enumerate(first_token):
+                        pos_df.append([i, k.split("=")[-1], j, cos_sim, avg_token[j]])
+            for i, embs in enumerate(word_embeddings):
+                for k, emb_cos in embs.items():
+                    first_token = emb_cos[0, :]
+                    avg_token = emb_cos.mean(axis=0)
+                    for j, cos_sim in enumerate(first_token):
+                        word_df.append([i, k.split("=")[-1], j, cos_sim, avg_token[j]])
+
+
+            pos_df = pd.DataFrame(pos_df, columns=["id", "batch_pos", "layer", "first_token", "avg_sim"])
+            pos_df['run'] = run.name
+            word_df = pd.DataFrame(word_df, columns=["id", "batch_pos", "layer", "first_token", "avg_sim"])
+            word_df['run'] = run.name
+            df.append(pos_df)
+            df1.append(word_df)
+
+    ## First token Embeddings plot
+    pos_df = pd.concat(df)
+    word_df = pd.concat(df1)
+
+    f, ax = plt.subplots(figsize=(5,3.75))
+    sns.lineplot(data=pos_df[pos_df["layer"]==12], x="batch_pos", y="first_token", ax=ax,  label="position embeddings")
+    sns.lineplot(data=word_df[word_df["layer"] == 12], x="batch_pos", y="first_token", ax=ax,  label="word embeddings")
+
+    ax.set(ylabel=f"Cosine Similarity", xlabel='Batch(k) Position')
+    # Per k factor
+    f.savefig(os.path.join(save_dir, f'pos_cos_first_token.pdf'))
+
+    ## Avg Embeddings plot
+    f, ax = plt.subplots(figsize=(5, 3.75))
+    sns.lineplot(data=pos_df[pos_df["layer"] == 12], x="batch_pos", y="avg_sim", ax=ax, label="position embeddings")
+    sns.lineplot(data=word_df[word_df["layer"] == 12], x="batch_pos", y="avg_sim", ax=ax, label="word embeddings")
+
+    ax.set(ylabel=f"Cosine Similarity", xlabel='Batch(k) Position')
+    # Per k factor
+    f.savefig(os.path.join(save_dir, f'pos_cos_avg_token.pdf'))
 
 
 
@@ -586,4 +653,5 @@ if __name__ == "__main__":
     # bias_experiment()
     # bias_experiment_k(dataset="conll03")
     # bias_experiment_k(dataset="ontonotes5")
-    attn_analysis(dataset="conll03")
+    emb_analysis(dataset="conll03")
+    # attn_analysis(dataset="conll03")
