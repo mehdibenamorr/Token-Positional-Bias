@@ -25,8 +25,8 @@ class POSProcessor(object):
         self.return_truncated_tokens = kwargs.get("return_truncated_tokens", False)
         # self.padding = kwargs.padding if kwargs else "max_length"
         # self.max_length = max_length
-        if self.truncation_strategy and self.max_length:
-            self.return_truncated_tokens = True
+        # if self.truncation_strategy and self.max_length:
+        #     self.return_truncated_tokens = True
 
     @property
     def tokenizer(self):
@@ -165,11 +165,11 @@ if __name__ == '__main__':
     from dataset.ner_dataset import NERDataset
 
     checkpoint = "bert-base-uncased"
-    en_ewt = POSDataset(dataset="en_ewt", debugging=True)
+    en_ewt = POSDataset(dataset="en_ewt", debugging=False)
 
     pos_processor = POSProcessor(pretrained_checkpoint=checkpoint, max_length=512, kwargs={})
 
-    for k in range(2, 11):
+    for k in range(10, 11):
         test_dataset = en_ewt.dataset["test_"].map(pos_processor.tokenize_and_align_labels,
                                                     fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
                                                     batched=True)
