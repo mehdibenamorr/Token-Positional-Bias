@@ -42,7 +42,8 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
                         help='Local directory of the WandB where the logs are stored')
     parser.add_argument('--experiment', type=str, default='bert-position-bias',
                         help='Name of the experiment')
-    parser.add_argument("--dataset", type=str, help="dataset to use", choices=["conll03", "ontonotes5"])
+    parser.add_argument("--dataset", type=str, help="dataset to use",
+                        choices=["conll03", "ontonotes5", "en_ewt", "tweebank"])
     parser.add_argument("--max_length", type=int, default=512,
                         help="The maximum total input sequence length to overwrite seq_length by given number. "
                              "Sequence longer than this "
@@ -65,7 +66,7 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
                         )
-    parser.add_argument('--duplicate_mode', type=str, default="none", choices=["none","shift", "sep"],
+    parser.add_argument('--duplicate_mode', type=str, default="none", choices=["none", "shift", "sep"],
                         help='Mode of duplication: possible values are, "none", "shift" (position_ids), '
                              'and "sep" (adding [SEP] token))',
                         )

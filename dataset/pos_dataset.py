@@ -54,7 +54,7 @@ URLS = {"en_ewt": "https://share.pads.fim.uni-passau.de/datasets/nlp/en_ewt/",
 
 
 class POSDatasetbuilder(datasets.GeneratorBasedBuilder):
-    """NER dataset (conll03, ontonotes5)."""
+    """POS dataset ("en_ewt", "tweebank")."""
 
     BUILDER_CONFIGS = []
 
@@ -90,24 +90,15 @@ class POSDatasetbuilder(datasets.GeneratorBasedBuilder):
         """gets the list of labels for this data set."""
         if dataset in ["en_ewt", "tweebank"]:
             return [
-                "NOUN",
-                "PUNCT",
-                "ADP",
-                "NUM",
-                "SYM",
-                "SCONJ",
-                "ADJ",
-                "PART",
-                "DET",
-                "CCONJ",
-                "PROPN",
-                "PRON",
-                "X",
-                "_",
-                "ADV",
-                "INTJ",
-                "VERB",
-                "AUX",
+                "O", "S-NOUN", "S-PUNCT", "S-ADP", "S-NUM", "S-SYM", "S-SCONJ", "S-ADJ", "S-PART", "S-DET", "S-CCONJ",
+                "S-PROPN", "S-PRON", "S-X", "S-ADV", "S-INTJ", "S-VERB", "S-AUX",
+                "B-NOUN", "B-PUNCT", "B-ADP", "B-NUM", "B-SYM", "B-SCONJ", "B-ADJ", "B-PART", "B-DET", "B-CCONJ",
+                "B-PROPN", "B-PRON", "B-X", "B-ADV", "B-INTJ", "B-VERB", "B-AUX",
+                "I-NOUN", "I-PUNCT", "I-ADP", "I-NUM", "I-SYM", "I-SCONJ", "I-ADJ", "I-PART", "I-DET", "I-CCONJ",
+                "I-PROPN", "I-PRON", "I-X", "I-ADV", "I-INTJ", "I-VERB", "I-AUX",
+                "E-NOUN", "E-PUNCT", "E-ADP", "E-NUM", "E-SYM", "E-SCONJ", "E-ADJ", "E-PART", "E-DET", "E-CCONJ",
+                "E-PROPN", "E-PRON", "E-X", "E-ADV", "E-INTJ", "E-VERB", "E-AUX"
+
             ]
         raise ValueError(f"Dataset {dataset} is not configured. Available datasets are {CONFIGS.keys()}.")
 
@@ -174,8 +165,10 @@ class POSDatasetbuilder(datasets.GeneratorBasedBuilder):
                 yield guid, {
                     "id": str(idx),
                     "tokens": [token["form"] for token in sent],
-                    "pos_tags": [token["upos"] for token in sent],
+                    "pos_tags": [f"S-{token['upos']}" if token["upos"] != "_" else "O" for token in sent],
                 }
+                if self.debugging and guid >= self.limit:
+                    return
                 guid += 1
 
 

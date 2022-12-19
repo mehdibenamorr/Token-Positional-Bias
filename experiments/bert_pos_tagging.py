@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: bert_position_bias.py
+# file: bert_pos_tagging.py
 #
-
 
 from utils import set_random_seed
 
@@ -16,8 +15,8 @@ import os
 from models.config import BertForTokenClassificationConfig
 from models.bert_ner import BertForTokenClassification
 from utils import get_parser
-from dataset.ner_dataset import NERDataset
-from dataset.ner_processor import NERProcessor
+from dataset.pos_dataset import POSDataset
+from dataset.pos_processor import POSProcessor
 from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
@@ -35,9 +34,9 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 
 
 class BertForNERTask(Trainer):
-    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, dataset: NERDataset,
+    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, dataset: POSDataset,
                  train: Dataset, eval: Dataset,
-                 processor: NERProcessor, **kwargs):
+                 processor: POSProcessor, **kwargs):
         # Args
         self.model_path = all_args.model
         self.max_length = all_args.max_length
@@ -180,8 +179,8 @@ def main():
         print(f"Run number:{i + 1}")
 
         # Dataset
-        dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
-        processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+        dataset = POSDataset(dataset=args.dataset, debugging=args.debugging)
+        processor = POSProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
                                  kwargs=config)
 
         train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
