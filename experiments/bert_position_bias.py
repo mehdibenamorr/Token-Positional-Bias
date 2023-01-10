@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 # file: bert_position_bias.py
 #
-
-
 from utils import set_random_seed
 
 set_random_seed(23456)
 from plot_utils.plot import plot_loss_dist
 import pandas as pd
-from transformers.trainer_utils import EvalLoopOutput
 import argparse
 from typing import Dict, Union, Any, Optional, List
 import os
@@ -18,32 +15,56 @@ from models.bert_ner import BertForTokenClassification
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
+from dataset.pos_dataset import POSDataset
+from dataset.pos_processor import POSProcessor
 from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
 from metrics.pos_loss import CrossEntropyLossPerPosition, padded_stack
 from metrics.ner_f1 import compute_ner_pos_f1, ner_span_metrics
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer, TrainingArguments, is_apex_available
 from pathlib import Path
 from torch.utils.data import DataLoader
 from datasets import Dataset
 import wandb
 import matplotlib.pyplot as plt
+
+from transformers.utils import is_sagemaker_mp_enabled
+
+if is_sagemaker_mp_enabled():
+    import smdistributed.modelparallel.torch as smp
+    from smdistributed.modelparallel import __version__ as SMP_VERSION
+
+    IS_SAGEMAKER_MP_POST_1_10 = version.parse(SMP_VERSION) >= version.parse("1.10")
+
+    from .trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
+else:
+    IS_SAGEMAKER_MP_POST_1_10 = False
+
+from method.batch_concat import concatenate_batch
+from method.position_shift import random_shift
+
+if is_apex_available():
+    from apex import amp
+
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-# os.environ['WANDB_DISABLED'] = "true"
+
+os.environ['WANDB_DISABLED'] = "true"
 
 
 class BertForNERTask(Trainer):
-    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace, dataset: NERDataset,
+    def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace,
+                 dataset: Union[NERDataset, POSDataset],
                  train: Dataset, eval: Dataset,
-                 processor: NERProcessor, **kwargs):
+                 processor: Union[NERProcessor, POSProcessor], **kwargs):
         # Args
         self.model_path = all_args.model
         self.max_length = all_args.max_length
         self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
         self.concatenate = all_args.concatenate
+        self.position_shift = all_args.position_shift
         self.all_args = all_args
         self.is_a_presaved_model = len(self.model_path.split('_')) > 1
         training_args.output_dir = os.path.join(str(Path.home()), training_args.output_dir)
@@ -83,7 +104,38 @@ class BertForNERTask(Trainer):
         return (loss, outputs) if return_outputs else loss
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
-        return super().training_step(model=model, inputs=inputs)
+        """
+        Perform a training step on a batch of inputs.
+
+        Two processing methods can be applied on each batch of inputs, i.e. random-shift of position ids and
+        concatenation with random premutations of position ids.
+
+        Subclass and override to inject custom behavior.
+
+        Args:
+            model (`nn.Module`):
+                The model to train.
+            inputs (`Dict[str, Union[torch.Tensor, Any]]`):
+                The inputs and targets of the model.
+
+                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
+                argument `labels`. Check your model's documentation for all accepted arguments.
+
+        Return:
+            `torch.Tensor`: The tensor with training loss on this batch.
+        """
+        hf_loss = super().training_step(model, inputs)
+
+        # Rerun the training step on the augmented batch
+        _inputs = None
+        if self.concatenate:
+            _inputs = concatenate_batch(inputs, max_length=self.max_length)
+        elif self.position_shift:
+            _inputs = random_shift(inputs, max_length=self.max_length)
+        if _inputs is not None:
+            _loss = super().training_step(model, _inputs)
+            return hf_loss.detach() + _loss.detach()
+        return hf_loss
 
     def evaluate(
             self,

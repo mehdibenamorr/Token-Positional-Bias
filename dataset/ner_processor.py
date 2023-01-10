@@ -141,7 +141,7 @@ def concatenate_seq(features, length=None):
     # return {"id": [str(i) for i in range(len(tokens))],
     #         "tokens": tokens,
     #         "ner_tags": tags}
-    return {}
+    return features
 
 
 def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2, mode="none"):

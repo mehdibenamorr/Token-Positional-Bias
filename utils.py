@@ -63,6 +63,9 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--concatenate', action="store_true",
                         help='If set, sequences are concatenated in batches to max_length',
                         )
+    parser.add_argument('--position_shift', action="store_true",
+                        help='If set, position ids are shifted to a random position',
+                        )
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
                         )
