@@ -125,7 +125,6 @@ class BertForNERTask(Trainer):
             `torch.Tensor`: The tensor with training loss on this batch.
         """
         hf_loss = super().training_step(model, inputs)
-
         # Rerun the training step on the augmented batch
         _inputs = None
         if self.concatenate:
@@ -161,19 +160,6 @@ class BertForNERTask(Trainer):
         eval_output = super().evaluation_loop(dataloader=dataloader, description=description,
                                               prediction_loss_only=prediction_loss_only, ignore_keys=ignore_keys,
                                               metric_key_prefix=metric_key_prefix)
-        # Log position distribution
-        # metrics = eval_output.metrics
-        # for l in metrics.keys():
-        #     if isinstance(metrics[l], dict):
-        #         table = metrics[l].pop("positions_distribution", None)
-        #         if table:
-        #             wandb.log({f'{l}.positions_distribution': wandb.plot.histogram(table, "positions",
-        #                                                                            title=f'{l}.positions_distribution')})
-        # pos_dist = metrics.pop(f"{metric_key_prefix}_pos_dist", None)
-        # if pos_dist is not None:
-        #     wandb.log({
-        #         f"{metric_key_prefix}_pos_dist": wandb.Image(pos_dist)})
-        #     plt.close(pos_dist)
         return eval_output
 
     def test(self,
