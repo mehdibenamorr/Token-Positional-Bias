@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: bert_ner.py
+# file: electra.py
 import math
 from typing import Optional, Union, Tuple, List
 
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
-from transformers import BertPreTrainedModel, BertModel, apply_chunking_to_forward
-from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
+from transformers import ElectraPreTrainedModel, ElectraModel, apply_chunking_to_forward
+from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutput
 
 from metrics.cosine_similartiy import cosine_similarity
 
 
-class BertForTokenClassification(BertPreTrainedModel):
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-
+class ElectraForTokenClassification(ElectraPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
         self.watch_attentions = config.watch_attentions
-        self.bert = BertModel(config, add_pooling_layer=False)
+        self.electra = ElectraModel(config)
         classifier_dropout = (
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
@@ -50,7 +48,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        outputs = self.bert(
+        discriminator_hidden_states = self.electra(
             input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
@@ -62,10 +60,10 @@ class BertForTokenClassification(BertPreTrainedModel):
             return_dict=return_dict,
         )
 
-        sequence_output = outputs[0]
+        discriminator_sequence_output = discriminator_hidden_states[0]
 
-        sequence_output = self.dropout(sequence_output)
-        logits = self.classifier(sequence_output)
+        discriminator_sequence_output = self.dropout(discriminator_sequence_output)
+        logits = self.classifier(discriminator_sequence_output)
 
         loss = None
         if labels is not None:
@@ -73,14 +71,14 @@ class BertForTokenClassification(BertPreTrainedModel):
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
-            output = (logits,) + outputs[2:]
+            output = (logits,) + discriminator_sequence_output[1:]
             return ((loss,) + output) if loss is not None else output
 
         return TokenClassifierOutput(
             loss=loss,
             logits=logits,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
+            hidden_states=discriminator_sequence_output.hidden_states,
+            attentions=discriminator_sequence_output.attentions,
         )
 
     def dissected_feed_forward(
@@ -96,11 +94,11 @@ class BertForTokenClassification(BertPreTrainedModel):
             return_dict: Optional[bool] = None,
             k: Optional[List] = None
     ):
-        output_attentions = output_attentions if output_attentions is not None else self.bert.config.output_attentions
+        output_attentions = output_attentions if output_attentions is not None else self.electra.config.output_attentions
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.bert.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.electra.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.bert.config.use_return_dict
+        return_dict = return_dict if return_dict is not None else self.electra.config.use_return_dict
 
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
@@ -121,8 +119,8 @@ class BertForTokenClassification(BertPreTrainedModel):
             attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
 
         if token_type_ids is None:
-            if hasattr(self.bert.embeddings, "token_type_ids"):
-                buffered_token_type_ids = self.bert.embeddings.token_type_ids[:, :seq_length]
+            if hasattr(self.electra.embeddings, "token_type_ids"):
+                buffered_token_type_ids = self.electra.embeddings.token_type_ids[:, :seq_length]
                 buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
@@ -130,22 +128,25 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask: torch.Tensor = self.bert.get_extended_attention_mask(attention_mask, input_shape)
+        extended_attention_mask: torch.Tensor = self.electra.get_extended_attention_mask(attention_mask, input_shape)
 
         # Prepare head mask if needed
         # 1.0 in head_mask indicate we keep the head
         # attention_probs has shape bsz x n_heads x N x N
         # input head_mask has shape [num_heads] or [num_hidden_layers x num_heads]
         # and head_mask is converted to shape [num_hidden_layers x batch x num_heads x seq_length x seq_length]
-        head_mask = self.bert.get_head_mask(head_mask, self.config.num_hidden_layers)
+        head_mask = self.electra.get_head_mask(head_mask, self.config.num_hidden_layers)
 
-        embedding_output = self.bert.embeddings(
+        embedding_output = self.electra.embeddings(
             input_ids=input_ids,
             position_ids=position_ids,
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
+
+        if hasattr(self.electra, "embeddings_project"):
+            embedding_output = self.electra.embeddings_project(embedding_output)
 
         # Dissected Encoder code (Start)
         sequence_mask = attention_mask.squeeze(0) == 1
@@ -155,7 +156,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         all_self_attentions = () if output_attentions else None
         attn_dict = {"attention_probs": {}, "attention_scores": {}}
         embs_dict = {}
-        for i, layer_module in enumerate(self.bert.encoder.layer):
+        for i, layer_module in enumerate(self.electra.encoder.layer):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
             layer_head_mask = head_mask[i] if head_mask is not None else None
@@ -223,7 +224,6 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         # Dissected Encoder code (End)
         sequence_output = hidden_states
-        pooled_output = self.bert.pooler(sequence_output) if self.bert.pooler is not None else None
 
         # Calculate cosine simlarity with intermediate representations wih each position (per k)
         embedding_output_cut = embedding_output.squeeze(0)[sequence_mask, :]
@@ -231,8 +231,8 @@ class BertForTokenClassification(BertPreTrainedModel):
         seq_len = embedding_output_cut.shape[-2]
         position_ids = torch.arange(seq_len, dtype=torch.long, device=embedding_output.device)
 
-        position_embs = self.bert.embeddings.position_embeddings(position_ids)
-        word_embs = self.bert.embeddings.word_embeddings(inputs)
+        position_embs = self.electra.embeddings.position_embeddings(position_ids)
+        word_embs = self.electra.embeddings.word_embeddings(inputs)
 
         k_factor = k[0][0]
         cos_results = cosine_similarity(word_embeds=word_embs, position_embeds=position_embs,
@@ -244,7 +244,6 @@ class BertForTokenClassification(BertPreTrainedModel):
                 v
                 for v in [
                     sequence_output,
-                    pooled_output,
                     all_hidden_states,
                     all_self_attentions,
                     cos_results,
@@ -253,9 +252,8 @@ class BertForTokenClassification(BertPreTrainedModel):
                 if v is not None
             )
 
-        return BaseModelOutputWithPoolingAndCrossAttentions(
+        return BaseModelOutput(
             last_hidden_state=sequence_output,
-            pooler_output=pooled_output,
             hidden_states=all_hidden_states,
             attentions=all_self_attentions,
         )

@@ -8,8 +8,8 @@ set_random_seed(23456)
 import argparse
 from typing import Dict, Optional, List
 import os
-from models.config import BertForTokenClassificationConfig
-from models.bert_ner import BertForTokenClassification
+from models.config import ConfigForTokenClassification
+from models.bert import BertForTokenClassification
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
@@ -25,6 +25,7 @@ import tempfile
 from torch.utils.data import DataLoader, SequentialSampler
 
 os.environ['WANDB_LOG_MODEL'] = "true"
+
 
 # Fix for warning :The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
 # os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -55,10 +56,10 @@ class BertForNEREval(Trainer):
                                        padding=self.all_args.padding)
 
         # Model loading
-        bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
-                                                                       watch_attentions=self.watch_attentions,
-                                                                       output_attentions=self.watch_attentions,
-                                                                       output_hidden_states=self.watch_attentions)
+        bert_config = ConfigForTokenClassification.from_pretrained(self.model_path,
+                                                                   watch_attentions=self.watch_attentions,
+                                                                   output_attentions=self.watch_attentions,
+                                                                   output_hidden_states=self.watch_attentions)
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
@@ -121,7 +122,7 @@ class BertForNEREval(Trainer):
             cos_results = outputs[-2]
             attn_dict = outputs[-1]
             sequence_info.append({"id": inputs["id"][0], "tokens": inputs["original_tokens"][0],
-                            "labels": [self.dataset.id2label[l] for l in inputs["original_tags"][0]]})
+                                  "labels": [self.dataset.id2label[l] for l in inputs["original_tags"][0]]})
             attention_scores.append(attn_dict["attention_probs"])
             raw_attention_scores.append(attn_dict["attention_scores"])
             positions_cosine.append(cos_results["positions_cosine"])
@@ -188,7 +189,8 @@ def main():
                                                                        "duplicate_mode": args.duplicate_mode},
                                                             load_from_cache_file=False, batched=True)
 
-                task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k, duplicate_mode=args.duplicate_mode)
+                task_eval.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k,
+                               duplicate_mode=args.duplicate_mode)
         elif args.watch_attentions:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
                                                         fn_kwargs={"duplicate": True, "k": 10},

@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 # file: config.py
 #
-from transformers import BertConfig
+from transformers import BertConfig, ElectraConfig, ErnieConfig
 
 
-class BertForTokenClassificationConfig(BertConfig):
+class ConfigForTokenClassification(BertConfig, ElectraConfig, ErnieConfig):
     def __init__(self, **kwargs):
-        super(BertForTokenClassificationConfig, self).__init__(**kwargs)
+        super(ConfigForTokenClassification, self).__init__(**kwargs)
         self.hidden_dropout_prob = kwargs.get("hidden_dropout_prob", 0.0)
         self.hidden_size = kwargs.get("hidden_size", 768)
         self.truncated_normal = kwargs.get("truncated_normal", False)

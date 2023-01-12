@@ -10,8 +10,8 @@ import pandas as pd
 import argparse
 from typing import Dict, Union, Any, Optional, List
 import os
-from models.config import BertForTokenClassificationConfig
-from models.bert_ner import BertForTokenClassification
+from models.config import ConfigForTokenClassification
+from models.bert import BertForTokenClassification
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
@@ -49,7 +49,6 @@ if is_apex_available():
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
-
 os.environ['WANDB_DISABLED'] = "true"
 
 
@@ -75,12 +74,12 @@ class BertForNERTask(Trainer):
                                        padding=self.all_args.padding)
 
         # Model loading
-        bert_config = BertForTokenClassificationConfig.from_pretrained(self.model_path,
-                                                                       id2label=self.dataset.id2label,
-                                                                       label2id=self.dataset.label2id,
-                                                                       position_embedding_type=self.pos_emb_type)
-        print(f"DEBUG INFO -> check bert_config \n {bert_config}")
-        model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
+        model_config = ConfigForTokenClassification.from_pretrained(self.model_path,
+                                                                    id2label=self.dataset.id2label,
+                                                                    label2id=self.dataset.label2id,
+                                                                    position_embedding_type=self.pos_emb_type)
+        print(f"DEBUG INFO -> check bert_config \n {model_config}")
+        model = BertForTokenClassification.from_pretrained(self.model_path, config=model_config)
 
         super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=train,
                                              eval_dataset=eval,
@@ -110,8 +109,6 @@ class BertForNERTask(Trainer):
         Two processing methods can be applied on each batch of inputs, i.e. random-shift of position ids and
         concatenation with random premutations of position ids.
 
-        Subclass and override to inject custom behavior.
-
         Args:
             model (`nn.Module`):
                 The model to train.
@@ -133,7 +130,8 @@ class BertForNERTask(Trainer):
             _inputs = random_shift(inputs, max_length=self.max_length)
         if _inputs is not None:
             _loss = super().training_step(model, _inputs)
-            return hf_loss.detach() + _loss.detach()
+            hf_loss += _loss
+            return hf_loss
         return hf_loss
 
     def evaluate(
