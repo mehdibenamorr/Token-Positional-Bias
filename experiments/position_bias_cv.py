@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: bert_position_bias_cv.py
+# file: position_bias_cv.py
 #
 
 
 from utils import set_random_seed
 
 set_random_seed(23456)
-from experiments.bert_position_bias import BertForNERTask
+from experiments.position_bias import TokenClassificationTrainer
 import os
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
@@ -57,8 +57,8 @@ def main():
                                                        load_from_cache_file=False)
             test_dataset = all_data.select(test_idx)
 
-            task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
-                                          eval=eval_dataset, dataset=dataset, processor=processor)
+            task_trainer = TokenClassificationTrainer(all_args=args, training_args=training_args, train=train_dataset,
+                                                      eval=eval_dataset, dataset=dataset, processor=processor)
             task_trainer.train()
 
             # task_trainer.log_pos_losses()

@@ -27,6 +27,7 @@ python ${REPO}/experiments/evaluate_attns.py \
 --max_length=${MAX_LENGTH} \
 --padding=${PADDING} \
 --padding_side=${PADDING_SIDE} \
+--seed=${SEED} \
 --truncation \
 --duplicate \
 --duplicate_mode ${MODE} \

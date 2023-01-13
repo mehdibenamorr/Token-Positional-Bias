@@ -3,8 +3,8 @@
 # file: ner_processor.py
 #
 
-from transformers import AutoTokenizer
 import numpy as np
+from transformers import AutoTokenizer
 
 
 class NERProcessor(object):
@@ -21,8 +21,6 @@ class NERProcessor(object):
             padding=padding, truncation=truncation,
             max_length=max_length)
         self.return_truncated_tokens = kwargs.get("return_truncated_tokens", False)
-        # self.padding = kwargs.padding if kwargs else "max_length"
-        # self.max_length = max_length
         if self.truncation_strategy and self.max_length:
             self.return_truncated_tokens = True
 
@@ -32,7 +30,7 @@ class NERProcessor(object):
 
     def tokenize_and_align_labels(self,
                                   examples,
-                                  label_all_tokens=True, concatenate=False, duplicate=False, k=2,
+                                  label_all_tokens=True, duplicate=False, k=2,
                                   duplicate_mode="none"):
 
         def align_label(labels, word_ids, label_all_tokens=True):
@@ -53,7 +51,7 @@ class NERProcessor(object):
                 previous_word_idx = word_idx
             return label_ids
 
-        examples_ = process_batch(examples, concatenate=concatenate, duplicate=duplicate, k=k, mode=duplicate_mode)
+        examples_ = process_batch(examples, duplicate=duplicate, k=k, mode=duplicate_mode)
 
         tokenized_inputs = self._tokenizer(examples_["tokens"],
                                            truncation=self.truncation_strategy,
@@ -62,7 +60,6 @@ class NERProcessor(object):
                                            return_overflowing_tokens=self.return_truncated_tokens,
                                            padding=self.padding)
         labels = []
-
 
         j = 0
         for i, label in enumerate(examples_[f"ner_tags"]):
@@ -93,14 +90,14 @@ class NERProcessor(object):
                 (indices,) = np.array(input_ids).nonzero()
                 indices = indices[1:]
                 shifted_pos = np.array(pos_ids)
-                shifted_pos[indices] += (k-1)*len(indices)
+                shifted_pos[indices] += (k - 1) * len(indices)
                 position_ids.append(shifted_pos.tolist())
             tokenized_inputs["position_ids"] = position_ids
         return tokenized_inputs
 
 
 def duplicate_seq(features, k=2, mode="none", sep_token="[SEP]"):
-    if mode=="sep":
+    if mode == "sep":
         tokens = [(k * (x + [sep_token]))[:-1] for x in features["tokens"]]
         tags = [(k * (x + [-100]))[:-1] for x in features["ner_tags"]]
     else:
@@ -115,42 +112,8 @@ def duplicate_seq(features, k=2, mode="none", sep_token="[SEP]"):
             "k": k_}
 
 
-def concatenate_seq(features, length=None):
-    # TODO update this method to concatenate up to max_length
-    # indices = [i for i in range(len(features["id"]))]
-    # n = int(ratio * len(indices))
-    # to_concat = random.sample(indices, n) if ratio < 1.0 else indices
-    # chunk_size = 5
-    # rest_idx = [a for a in indices if a not in to_concat]
-    # tokens = [x for x in list(itemgetter(*rest_idx)(features["tokens"]))]
-    # tags = [x for x in list(itemgetter(*rest_idx)(features["ner_tags"]))]
-    # for i in range(0, len(to_concat), chunk_size):
-    #     concat_ids = to_concat[i:i + chunk_size]
-    #     if len(concat_ids) > 1:
-    #         tokens.append(
-    #             [x for x in itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["tokens"])))])
-    #         tags.append(
-    #             [x for x in
-    #              itertools.chain.from_iterable(list(itemgetter(*concat_ids)(features["ner_tags"])))])
-    #     else:
-    #         tokens.append(
-    #             [x for x in list(itemgetter(*concat_ids)(features["tokens"]))])
-    #         tags.append(
-    #             [x for x in list(itemgetter(*concat_ids)(features["ner_tags"]))])
-    #
-    # return {"id": [str(i) for i in range(len(tokens))],
-    #         "tokens": tokens,
-    #         "ner_tags": tags}
-    return features
-
-
-def process_batch(examples, max_length=None, concatenate=False, duplicate=False, k=2, mode="none"):
-    # ToDo concatenate test, and permutate random words?
+def process_batch(examples, duplicate=False, k=2, mode="none"):
     features_ = examples.data
-    if concatenate:
-        # ToDo Concatenate sequences
-        data = concatenate_seq(features_, length=max_length)
-        examples.data = data
     if duplicate:
         if mode in ["none", "sep"]:
             data = duplicate_seq(features_, k=k, mode=mode, sep_token="[SEP]")

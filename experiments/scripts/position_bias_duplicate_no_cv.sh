@@ -17,23 +17,23 @@ PADDING_SIDE=right
 POS_EMB_TYPE=absolute
 
 #Script ARGS
-EXPERIMENT=bert_position_bias_cv
-MODEL=bert-base-uncased
+EXPERIMENT=position_bias
+MODEL=$2
 DATASET=$1
-NBRUNS=1
-NBFOLDS=10
+NBRUNS=5
 
 
 
-OUTPUT_DIR=/data/.position_bias_cv
+OUTPUT_DIR=/data/.position_bias
 
 REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
 
 
-python ${REPO}/experiments/bert_position_bias_cv.py \
+python ${REPO}/experiments/position_bias.py \
 --output_dir=${OUTPUT_DIR} \
---dataset=${DATASET} \
+--model="${MODEL}" \
+--dataset="${DATASET}" \
 --experiment=${EXPERIMENT} \
 --max_length=${MAX_LENGTH} \
 --padding=${PADDING} \
@@ -52,6 +52,5 @@ python ${REPO}/experiments/bert_position_bias_cv.py \
 --position_embedding_type ${POS_EMB_TYPE} \
 --include_inputs_for_metrics \
 --duplicate \
---cv ${NBFOLDS} \
 --truncation
 

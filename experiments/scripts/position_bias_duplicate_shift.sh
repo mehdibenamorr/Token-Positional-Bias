@@ -25,6 +25,7 @@ python ${REPO}/experiments/evaluate_attns.py \
 --dataset=${DATASET} \
 --experiment=${EXPERIMENT} \
 --max_length=${MAX_LENGTH} \
+--seed=${SEED} \
 --padding=${PADDING} \
 --padding_side=${PADDING_SIDE} \
 --truncation \

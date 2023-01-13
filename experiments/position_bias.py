@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: bert_position_bias.py
+# file: position_bias.py
 #
 from utils import set_random_seed
 
@@ -10,8 +10,8 @@ import pandas as pd
 import argparse
 from typing import Dict, Union, Any, Optional, List
 import os
-from models.config import ConfigForTokenClassification
-from models.bert import BertForTokenClassification
+from models.config import config_mapping
+from models import model_mapping
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
 from dataset.ner_processor import NERProcessor
@@ -37,7 +37,7 @@ if is_sagemaker_mp_enabled():
 
     IS_SAGEMAKER_MP_POST_1_10 = version.parse(SMP_VERSION) >= version.parse("1.10")
 
-    from .trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
+    from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
 
@@ -52,7 +52,7 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 os.environ['WANDB_DISABLED'] = "true"
 
 
-class BertForNERTask(Trainer):
+class TokenClassificationTrainer(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace,
                  dataset: Union[NERDataset, POSDataset],
                  train: Dataset, eval: Dataset,
@@ -60,7 +60,6 @@ class BertForNERTask(Trainer):
         # Args
         self.model_path = all_args.model
         self.max_length = all_args.max_length
-        self.pos_emb_type = all_args.position_embedding_type
         self.nbruns = all_args.nbruns
         self.concatenate = all_args.concatenate
         self.position_shift = all_args.position_shift
@@ -74,19 +73,23 @@ class BertForNERTask(Trainer):
                                        padding=self.all_args.padding)
 
         # Model loading
-        model_config = ConfigForTokenClassification.from_pretrained(self.model_path,
-                                                                    id2label=self.dataset.id2label,
-                                                                    label2id=self.dataset.label2id,
-                                                                    position_embedding_type=self.pos_emb_type)
+        config_cls = config_mapping[self.model_path]
+        model_config = config_cls.from_pretrained(self.model_path,
+                                                  id2label=self.dataset.id2label,
+                                                  label2id=self.dataset.label2id)
         print(f"DEBUG INFO -> check bert_config \n {model_config}")
-        model = BertForTokenClassification.from_pretrained(self.model_path, config=model_config)
+        if self.model_path in model_mapping:
+            model_cls = model_mapping[self.model_path]
+        else:
+            raise ValueError(f"Model {self.model_path} not supported")
+        model = model_cls.from_pretrained(self.model_path, config=model_config)
 
-        super(BertForNERTask, self).__init__(model, args=training_args, train_dataset=train,
-                                             eval_dataset=eval,
-                                             data_collator=self.collate_fn, tokenizer=processor.tokenizer,
-                                             compute_metrics=lambda p: compute_ner_pos_f1(p=p,
-                                                                                          label_list=self.dataset.labels),
-                                             **kwargs)
+        super(TokenClassificationTrainer, self).__init__(model, args=training_args, train_dataset=train,
+                                                         eval_dataset=eval,
+                                                         data_collator=self.collate_fn, tokenizer=processor.tokenizer,
+                                                         compute_metrics=lambda p: compute_ner_pos_f1(p=p,
+                                                                                                      label_list=self.dataset.labels),
+                                                         **kwargs)
         self.loss_pos_fn = CrossEntropyLossPerPosition()
         self.losses = {"train": [], "dev": []}
         self.is_in_eval = False
@@ -204,7 +207,7 @@ def main():
     training_args, args = parser.parse_args_into_dataclasses()
     os.makedirs(training_args.output_dir, exist_ok=True)
     os.environ["WANDB_DIR"] = training_args.output_dir
-    experiment_name = f"{args.experiment}-{args.dataset}"
+    experiment_name = f"{args.model.split('/')[-1]}-{args.experiment}-{args.dataset}"
     tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
             f"padding={args.padding}", f"seed={training_args.seed}",
             f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}",
@@ -216,22 +219,24 @@ def main():
         print(f"Run number:{i + 1}")
 
         # Dataset
-        dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
-        processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
-                                 kwargs=config)
+        if args.dataset in ["conll03", "ontonotes5"]:
+            dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
+            processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+                                     kwargs=config)
+        elif args.dataset in ["en_ewt", "tweebank"]:
+            dataset = POSDataset(dataset=args.dataset, debugging=args.debugging)
+            processor = POSProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+                                     kwargs=config)
+        else:
+            raise ValueError(f"Dataset {args.dataset} not supported")
 
         train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
-                                                      fn_kwargs={"concatenate": args.concatenate},
                                                       batched=True)
         eval_dataset = dataset.dataset["dev_"].map(processor.tokenize_and_align_labels, batched=True)
 
-        task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
-                                      eval=eval_dataset, dataset=dataset, processor=processor)
+        task_trainer = TokenClassificationTrainer(all_args=args, training_args=training_args, train=train_dataset,
+                                                  eval=eval_dataset, dataset=dataset, processor=processor)
         task_trainer.train()
-        #
-        # task_trainer.evaluate()
-
-        # task_trainer.log_pos_losses()
 
         if args.duplicate:
             for k in range(1, 11):

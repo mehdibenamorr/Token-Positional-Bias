@@ -9,7 +9,6 @@ from pathlib import Path
 
 import datasets
 import matplotlib.pyplot as plt
-import numpy as np
 from datasets import ClassLabel, DownloadConfig
 
 

@@ -17,8 +17,8 @@ PADDING_SIDE=right
 POS_EMB_TYPE=absolute
 
 #Script ARGS
-EXPERIMENT=bert_pos_tagging_no_cv
-MODEL=bert-base-uncased
+EXPERIMENT=position_bias
+MODEL=$2
 DATASET=$1
 NBRUNS=5
 
@@ -30,9 +30,10 @@ REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
 
 
-python ${REPO}/experiments/bert_pos_tagging.py \
+python ${REPO}/experiments/position_bias.py \
 --output_dir=${OUTPUT_DIR} \
---dataset=${DATASET} \
+--model="${MODEL}" \
+--dataset="${DATASET}" \
 --experiment=${EXPERIMENT} \
 --max_length=${MAX_LENGTH} \
 --padding=${PADDING} \

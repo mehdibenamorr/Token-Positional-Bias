@@ -34,7 +34,7 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 # os.environ['WANDB_DISABLED'] = "true"
 
 
-class BertForNEREval(Trainer):
+class TokenClassificationEvaluator(Trainer):
     def __init__(self, model_path: str, all_args: argparse.Namespace, dataset: NERDataset,
                  processor: NERProcessor, **kwargs):
         # Args
@@ -63,9 +63,9 @@ class BertForNEREval(Trainer):
         print(f"DEBUG INFO -> check bert_config \n {bert_config}")
         model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
 
-        super(BertForNEREval, self).__init__(model, args=training_args,
-                                             data_collator=self.collate_fn, tokenizer=processor.tokenizer,
-                                             **kwargs)
+        super(TokenClassificationEvaluator, self).__init__(model, args=training_args,
+                                                           data_collator=self.collate_fn, tokenizer=processor.tokenizer,
+                                                           **kwargs)
         self.is_in_eval = True
 
     def test(self,
@@ -179,7 +179,7 @@ def main():
         model_url = f"{run_path}/model-{run.id}:latest"
         model_artifact = eval_run.use_artifact(model_url, type="model")
         model_path = model_artifact.download()
-        task_eval = BertForNEREval(model_path, all_args=args, dataset=dataset, processor=processor)
+        task_eval = TokenClassificationEvaluator(model_path, all_args=args, dataset=dataset, processor=processor)
 
         tempdir = None
         if args.duplicate:

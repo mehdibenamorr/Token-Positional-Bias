@@ -6,7 +6,7 @@
 from utils import set_random_seed
 
 set_random_seed(23456)
-from experiments.bert_position_bias import BertForNERTask
+from experiments.position_bias import TokenClassificationTrainer
 import os
 from utils import get_parser
 from dataset.pos_dataset import POSDataset
@@ -15,6 +15,7 @@ import torch
 import wandb
 
 os.environ['WANDB_LOG_MODEL'] = "true"
+
 
 # os.environ['WANDB_DISABLED'] = "true"
 
@@ -41,17 +42,12 @@ def main():
                                  kwargs=config)
 
         train_dataset = dataset.dataset["train_"].map(processor.tokenize_and_align_labels,
-                                                      fn_kwargs={"concatenate": args.concatenate},
                                                       batched=True)
         eval_dataset = dataset.dataset["dev_"].map(processor.tokenize_and_align_labels, batched=True)
 
-        task_trainer = BertForNERTask(all_args=args, training_args=training_args, train=train_dataset,
-                                      eval=eval_dataset, dataset=dataset, processor=processor)
+        task_trainer = TokenClassificationTrainer(all_args=args, training_args=training_args, train=train_dataset,
+                                                  eval=eval_dataset, dataset=dataset, processor=processor)
         task_trainer.train()
-        #
-        # task_trainer.evaluate()
-
-        # task_trainer.log_pos_losses()
 
         if args.duplicate:
             for k in range(1, 11):
@@ -62,10 +58,10 @@ def main():
                 task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 1},
+                                                        fn_kwargs={"duplicate": True, "k": 10},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=10)
 
         wandb.finish()
         task_trainer = None
