@@ -16,7 +16,7 @@ PADDING_SIDE=right
 POS_EMB_TYPE=absolute
 
 #Script ARGS
-EXPERIMENT=bert_finetune_shift
+EXPERIMENT=finetune_shift
 MODEL=$2
 DATASET=$1
 NBRUNS=5
