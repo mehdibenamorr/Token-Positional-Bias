@@ -157,7 +157,7 @@ def main():
     entity = args.wandb_user
     os.environ["WANDB_DIR"] = args.wandb_dir
     api = wandb.Api()
-    experiment_ref = f"bert_position_bias_no_cv-{args.dataset}"
+    experiment_ref = f"{args.model.split('/')[-1]}-position_bias-{args.dataset}"
     runs = api.runs(entity + "/" + experiment_ref)
     tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
             f"padding={args.padding}",

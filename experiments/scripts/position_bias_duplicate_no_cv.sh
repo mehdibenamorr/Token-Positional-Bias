@@ -14,7 +14,6 @@ MAX_EPOCH=5
 EVAL_STRATEGY=epoch
 PADDING=max_length
 PADDING_SIDE=right
-POS_EMB_TYPE=absolute
 
 #Script ARGS
 EXPERIMENT=position_bias
