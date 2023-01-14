@@ -48,19 +48,31 @@ def concatenate_batch(batch, max_length=512):
     new_labels = []
     for subset in to_concat_idx:
         # Concatenate the sequences
-        new_length = sum([seq_lengths[i] for i in subset]) + 1
-        permutations_list = list(unique_permutations(subset, len(subset), len(subset)))
-        new_input_ids += [
-            F.pad(torch.cat([torch.Tensor([101]).to(dtype=dtype)] + list(itemgetter(*permutation)(original_input_ids)),
-                            dim=0), pad=(0, max_length - new_length), mode="constant", value=0)
-            for permutation in permutations_list]
-        new_labels += [
-            F.pad(torch.cat([torch.Tensor([-100]).to(dtype=dtype)] + list(itemgetter(*permutation)(original_labels)),
-                            dim=0), pad=(0, max_length - new_length), mode="constant", value=-100)
-            for permutation in permutations_list]
+        if len(subset) == 1:
+            new_length = sum([seq_lengths[i] for i in subset]) + 1
+            new_input_ids += [
+                F.pad(torch.cat([torch.Tensor([101]).to(dtype=dtype), original_input_ids[subset[0]]], dim=0),
+                      pad=(0, max_length - new_length), mode="constant", value=0)]
+            new_labels += [
+                F.pad(torch.cat([torch.Tensor([-100]).to(dtype=dtype), original_labels[subset[0]]], dim=0),
+                                 pad=(0, max_length - new_length), mode="constant", value=-100)]
+
+        else:
+            new_length = sum([seq_lengths[i] for i in subset]) + 1
+            permutations_list = list(unique_permutations(subset, len(subset), len(subset)))
+            new_input_ids += [
+                F.pad(torch.cat(
+                    [torch.Tensor([101]).to(dtype=dtype)] + list(itemgetter(*permutation)(original_input_ids)),
+                    dim=0), pad=(0, max_length - new_length), mode="constant", value=0)
+                for permutation in permutations_list]
+            new_labels += [
+                F.pad(
+                    torch.cat([torch.Tensor([-100]).to(dtype=dtype)] + list(itemgetter(*permutation)(original_labels)),
+                              dim=0), pad=(0, max_length - new_length), mode="constant", value=-100)
+                for permutation in permutations_list]
 
     batch["input_ids"] = torch.stack(new_input_ids)
     batch["labels"] = torch.stack(new_labels)
     batch["attention_mask"] = torch.where(batch["input_ids"] != 0, torch.ones_like(batch["input_ids"]),
-                                            torch.zeros_like(batch["input_ids"]))
+                                          torch.zeros_like(batch["input_ids"]))
     return batch

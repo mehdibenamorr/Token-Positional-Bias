@@ -12,23 +12,18 @@ PADDING_SIDE=right
 EXPERIMENT=bert_position_bias_eval
 DATASET=$1
 
-
-
 OUTPUT_DIR=/data/.position_bias
 
 REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
 
-
 CUDA_VISIBLE_DEVICES=0 python ${REPO}/experiments/evaluate_attns.py \
---wandb_dir=${OUTPUT_DIR} \
---dataset=${DATASET} \
---experiment=${EXPERIMENT} \
---max_length=${MAX_LENGTH} \
---padding=${PADDING} \
---padding_side=${PADDING_SIDE} \
---truncation \
---debugging \
---batch_size=${BATCH_SIZE} \
---watch_attentions
-
+  --wandb_dir=${OUTPUT_DIR} \
+  --dataset=${DATASET} \
+  --experiment=${EXPERIMENT} \
+  --max_length=${MAX_LENGTH} \
+  --padding=${PADDING} \
+  --padding_side=${PADDING_SIDE} \
+  --debugging \
+  --batch_size=${BATCH_SIZE} \
+  --watch_attentions

@@ -43,5 +43,4 @@ python ${REPO}/experiments/position_bias.py \
   --lr_scheduler_type ${LR_SCHEDULE} \
   --num_train_epochs ${MAX_EPOCH} \
   --evaluation_strategy ${EVAL_STRATEGY} \
-  --concatenate \
-  --truncation
+  --concatenate

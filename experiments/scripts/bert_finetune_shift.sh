@@ -21,30 +21,26 @@ NBRUNS=1
 PADDING=max_length
 PADDING_SIDE=right
 
-
 OUTPUT_DIR=/data/.position_bias
-
 
 REPO=/data/p-22-ner-position-bias
 export PYTHONPATH="$PYTHONPATH:$REPO"
 
-
 python ${REPO}/experiments/position_bias.py \
---output_dir=${OUTPUT_DIR} \
---model="${MODEL}" \
---dataset="${DATASET}" \
---experiment=${EXPERIMENT} \
---seq_length=${SEQ_LENTGH} \
---padding=${PADDING} \
---padding_side=${PADDING_SIDE} \
---nbruns=${NBRUNS} \
---seed=${SEED} \
---per_device_train_batch_size ${TRAIN_BATCH_SIZE} \
---per_device_eval_batch_size ${EVAL_BATCH_SIZE} \
---optim ${OPTIMIZER} \
---learning_rate ${LR} \
---lr_scheduler_type ${LR_SCHEDULE} \
---num_train_epochs ${MAX_EPOCH} \
---evaluation_strategy ${EVAL_STRATEGY} \
---position_shift \
---truncation \
+  --output_dir=${OUTPUT_DIR} \
+  --model="${MODEL}" \
+  --dataset="${DATASET}" \
+  --experiment=${EXPERIMENT} \
+  --seq_length=${SEQ_LENTGH} \
+  --padding=${PADDING} \
+  --padding_side=${PADDING_SIDE} \
+  --nbruns=${NBRUNS} \
+  --seed=${SEED} \
+  --per_device_train_batch_size ${TRAIN_BATCH_SIZE} \
+  --per_device_eval_batch_size ${EVAL_BATCH_SIZE} \
+  --optim ${OPTIMIZER} \
+  --learning_rate ${LR} \
+  --lr_scheduler_type ${LR_SCHEDULE} \
+  --num_train_epochs ${MAX_EPOCH} \
+  --evaluation_strategy ${EVAL_STRATEGY} \
+  --position_shift

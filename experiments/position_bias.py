@@ -247,10 +247,10 @@ def main():
                 task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 1},
+                                                        fn_kwargs={"duplicate": True, "k": 10},
                                                         load_from_cache_file=False,
                                                         batched=True)
-            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=1)
+            task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=10)
 
         wandb.finish()
         task_trainer = None
