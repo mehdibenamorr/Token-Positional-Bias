@@ -14,7 +14,7 @@ class POSProcessor(object):
 
     def __init__(self, pretrained_checkpoint, max_length=None, lower_case=True, kwargs=None):
         padding_side = kwargs.get("padding_side", "right")
-        padding = kwargs.get("padding", "longest")
+        padding = kwargs.get("padding", "max_length")
         truncation = kwargs.get("truncation", False)
 
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case,
@@ -128,15 +128,15 @@ if __name__ == '__main__':
     from dataset.ner_dataset import NERDataset
 
     checkpoint = "bert-base-uncased"
-    en_ewt = POSDataset(dataset="en_ewt", debugging=False)
+    en_ewt = POSDataset(dataset="tweebank", debugging=False)
 
     pos_processor = POSProcessor(pretrained_checkpoint=checkpoint, max_length=512, kwargs={})
 
-    for k in range(10, 11):
-        test_dataset = en_ewt.dataset["test_"].map(pos_processor.tokenize_and_align_labels,
-                                                   fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
-                                                   batched=True)
-        print(test_dataset[0])
+
+    test_dataset = en_ewt.dataset["test_"].map(pos_processor.tokenize_and_align_labels,
+                                               fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
+                                               batched=True)
+    print("Duplicated Test set: ", test_dataset[0])
 
     tokenized_datasets = en_ewt.dataset.map(pos_processor.tokenize_and_align_labels, batched=True)
 

@@ -19,7 +19,6 @@ def unique_permutations(sequence, r, n):
 
 
 def concatenate_batch(batch, max_length=512):
-    print("here")
     input_ids = list(batch["input_ids"])
     labels = list(batch["labels"])
     dtype = batch["input_ids"].dtype
