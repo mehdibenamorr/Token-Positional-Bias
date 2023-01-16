@@ -69,7 +69,7 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
     parser.add_argument('--duplicate', action="store_true",
                         help='If set, test set will be duplicated',
                         )
-    parser.add_argument('--duplicate_mode', type=str, default="none", choices=["none", "shift", "sep"],
+    parser.add_argument('--duplicate_mode', type=str, default="sep", choices=["none", "shift", "sep"],
                         help='Mode of duplication: possible values are, "none", "shift" (position_ids), '
                              'and "sep" (adding [SEP] token))',
                         )
