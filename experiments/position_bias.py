@@ -50,7 +50,6 @@ if is_apex_available():
 os.environ['WANDB_LOG_MODEL'] = "true"
 
 # os.environ['WANDB_DISABLED'] = "true"
-os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 
 class TokenClassificationTrainer(Trainer):
