@@ -11,6 +11,7 @@ PADDING_SIDE=right
 #Script ARGS
 EXPERIMENT=bert_position_bias_eval
 DATASET=$1
+MODE=sep
 
 OUTPUT_DIR=/data/.position_bias
 
@@ -26,4 +27,5 @@ CUDA_VISIBLE_DEVICES=0 python ${REPO}/experiments/evaluate_attns.py \
   --padding_side=${PADDING_SIDE} \
   --debugging \
   --batch_size=${BATCH_SIZE} \
+  --duplicate_mode ${MODE} \
   --watch_attentions

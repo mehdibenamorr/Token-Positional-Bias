@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# file: bloom.py
+# file: decoder_only.py
 
 import warnings
 from typing import Optional, Union, Tuple

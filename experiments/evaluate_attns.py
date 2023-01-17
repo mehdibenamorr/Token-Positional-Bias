@@ -193,7 +193,8 @@ def main():
                                duplicate_mode=args.duplicate_mode)
         elif args.watch_attentions:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 10},
+                                                        fn_kwargs={"duplicate": True, "k": 10,
+                                                                   "duplicate_mode": args.duplicate_mode},
                                                         load_from_cache_file=False,
                                                         batched=True)
             tempdir = task_eval.eval_attn(test_dataset=test_dataset)

@@ -50,6 +50,7 @@ if is_apex_available():
 os.environ['WANDB_LOG_MODEL'] = "true"
 
 # os.environ['WANDB_DISABLED'] = "true"
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 
 class TokenClassificationTrainer(Trainer):
@@ -83,6 +84,9 @@ class TokenClassificationTrainer(Trainer):
         else:
             raise ValueError(f"Model {self.model_path} not supported")
         model = model_cls.from_pretrained(self.model_path, config=model_config)
+
+        if processor.resize_token_embeddings:
+            model.resize_token_embeddings(len(processor.tokenizer))
 
         super(TokenClassificationTrainer, self).__init__(model, args=training_args, train_dataset=train,
                                                          eval_dataset=eval,
@@ -241,13 +245,15 @@ def main():
         if args.duplicate:
             for k in range(1, 11):
                 test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                            fn_kwargs={"duplicate": args.duplicate, "k": k},
+                                                            fn_kwargs={"duplicate": args.duplicate, "k": k,
+                                                                       "duplicate_mode": args.duplicate_mode},
                                                             load_from_cache_file=False, batched=True)
 
                 task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k={k}", k=k)
         else:
             test_dataset = dataset.dataset["test_"].map(processor.tokenize_and_align_labels,
-                                                        fn_kwargs={"duplicate": True, "k": 10},
+                                                        fn_kwargs={"duplicate": True, "k": 10,
+                                                                   "duplicate_mode": args.duplicate_mode},
                                                         load_from_cache_file=False,
                                                         batched=True)
             task_trainer.test(test_dataset=test_dataset, metric_key_prefix=f"test_k=10", k=10)

@@ -4,7 +4,7 @@
 #
 
 import numpy as np
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 
 class NERProcessor(object):

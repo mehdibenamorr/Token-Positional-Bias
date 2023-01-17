@@ -20,6 +20,7 @@ EXPERIMENT=position_bias
 MODEL=$2
 DATASET=$1
 NBRUNS=5
+MODE=sep
 
 OUTPUT_DIR=/data/.position_bias
 
@@ -46,4 +47,5 @@ python ${REPO}/experiments/position_bias.py \
   --save_strategy ${EVAL_STRATEGY} \
   --logging_strategy ${EVAL_STRATEGY} \
   --include_inputs_for_metrics \
-  --duplicate
+  --duplicate \
+  --duplicate_mode ${MODE}

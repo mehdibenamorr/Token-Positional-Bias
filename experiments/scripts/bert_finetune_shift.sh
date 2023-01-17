@@ -20,6 +20,7 @@ EXPERIMENT=finetune_shift
 MODEL=$2
 DATASET=$1
 NBRUNS=5
+MODE=sep
 
 
 OUTPUT_DIR=/data/.finetuning
@@ -47,4 +48,6 @@ python ${REPO}/experiments/position_bias.py \
   --save_strategy ${EVAL_STRATEGY} \
   --logging_strategy ${EVAL_STRATEGY} \
   --position_embedding_type ${POS_EMB_TYPE} \
-  --position_shift
+  --position_shift \
+  --duplicate \
+  --duplicate_mode ${MODE}

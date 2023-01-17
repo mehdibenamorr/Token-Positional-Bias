@@ -18,7 +18,11 @@ class POSProcessor(object):
         truncation = kwargs.get("truncation", False)
 
         self._tokenizer = AutoTokenizer.from_pretrained(pretrained_checkpoint, do_lower_case=lower_case,
-                                                        padding_side=padding_side)
+                                                        padding_side=padding_side, add_prefix_space=True)
+        self.resize_token_embeddings = False
+        if self._tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({'pad_token': '[PAD]'}) # Add a pad token
+            self.resize_token_embeddings = True
         self.padding, self.truncation_strategy, self.max_length, _ = self.tokenizer._get_padding_truncation_strategies(
             padding=padding, truncation=truncation,
             max_length=max_length)
