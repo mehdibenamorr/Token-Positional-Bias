@@ -26,7 +26,7 @@ class POSProcessor(object):
         self.padding, self.truncation_strategy, self.max_length, _ = self.tokenizer._get_padding_truncation_strategies(
             padding=padding, truncation=truncation,
             max_length=max_length)
-        self.return_truncated_tokens = False
+        self.return_truncated_tokens = True
         # if self.truncation_strategy and self.max_length:
         #     self.return_truncated_tokens = True
 
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
 
     test_dataset = en_ewt.dataset["test_"].map(pos_processor.tokenize_and_align_labels,
-                                               fn_kwargs={"duplicate": True, "k": k}, load_from_cache_file=False,
+                                               fn_kwargs={"duplicate": True, "k": 10}, load_from_cache_file=False,
                                                batched=True)
     print("Duplicated Test set: ", test_dataset[0])
 
