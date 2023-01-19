@@ -8,15 +8,15 @@ set_random_seed(23456)
 import argparse
 from typing import Dict, Optional, List
 import os
-from models.config import ConfigForTokenClassification
+from models.config import BertConfigForTokenClassification, AutoConfig
 from models.bert import BertForTokenClassification
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
-from dataset.ner_processor import NERProcessor
+from dataset.processor import Processor
 from dataset.collate_fn import DataCollator
 import torch
 from metrics.ner_f1 import ner_span_metrics, compute_ner_pos_f1
-from transformers import Trainer, TrainingArguments
+from transformers import Trainer, TrainingArguments, AutoModelForTokenClassification
 from datasets import Dataset
 import wandb
 from transformers.trainer import logger
@@ -36,7 +36,7 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 
 class TokenClassificationEvaluator(Trainer):
     def __init__(self, model_path: str, all_args: argparse.Namespace, dataset: NERDataset,
-                 processor: NERProcessor, **kwargs):
+                 processor: Processor, **kwargs):
         # Args
         self.model_path = model_path
         self.max_length = all_args.max_length
@@ -56,12 +56,20 @@ class TokenClassificationEvaluator(Trainer):
                                        padding=self.all_args.padding)
 
         # Model loading
-        bert_config = ConfigForTokenClassification.from_pretrained(self.model_path,
+        if "bert" in self.model_path:
+            config = BertConfigForTokenClassification.from_pretrained(self.model_path,
                                                                    watch_attentions=self.watch_attentions,
                                                                    output_attentions=self.watch_attentions,
                                                                    output_hidden_states=self.watch_attentions)
-        print(f"DEBUG INFO -> check bert_config \n {bert_config}")
-        model = BertForTokenClassification.from_pretrained(self.model_path, config=bert_config)
+            model = BertForTokenClassification.from_pretrained(self.model_path, config=config)
+        else:
+            config = AutoConfig.from_pretrained(self.model_path,
+                                                watch_attentions=self.watch_attentions,
+                                                output_attentions=self.watch_attentions,
+                                                output_hidden_states=self.watch_attentions)
+            model = AutoModelForTokenClassification.from_pretrained(self.model_path, config=config)
+
+        print(f"DEBUG INFO -> check bert_config \n {config}")
 
         super(TokenClassificationEvaluator, self).__init__(model, args=training_args,
                                                            data_collator=self.collate_fn, tokenizer=processor.tokenizer,
@@ -171,7 +179,7 @@ def main():
 
         # Dataset
         dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
-        processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+        processor = Processor(pretrained_checkpoint=args.model, max_length=args.max_length,
                                  kwargs=config)
 
         # Download the fine-tuned model

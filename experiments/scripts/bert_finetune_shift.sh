@@ -50,4 +50,5 @@ python ${REPO}/experiments/position_bias.py \
   --position_embedding_type ${POS_EMB_TYPE} \
   --position_shift \
   --duplicate \
+  --truncation \
   --duplicate_mode ${MODE}

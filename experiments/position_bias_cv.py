@@ -11,7 +11,7 @@ from experiments.position_bias import TokenClassificationTrainer
 import os
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
-from dataset.ner_processor import NERProcessor
+from dataset.processor import Processor
 from sklearn.model_selection import KFold
 import wandb
 import torch
@@ -36,7 +36,7 @@ def main():
         config = vars(args)
         # CV with 10-fold (k=10)
         dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
-        processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
+        processor = Processor(pretrained_checkpoint=args.model, max_length=args.max_length,
                                  kwargs=config)
 
         all_data = dataset.dataset["all_"]

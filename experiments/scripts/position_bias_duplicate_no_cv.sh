@@ -48,4 +48,5 @@ python ${REPO}/experiments/position_bias.py \
   --logging_strategy ${EVAL_STRATEGY} \
   --include_inputs_for_metrics \
   --duplicate \
+  --truncation \
   --duplicate_mode ${MODE}

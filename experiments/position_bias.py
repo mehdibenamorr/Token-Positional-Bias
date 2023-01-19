@@ -14,9 +14,8 @@ from models.config import config_mapping
 from models import model_mapping
 from utils import get_parser
 from dataset.ner_dataset import NERDataset
-from dataset.ner_processor import NERProcessor
 from dataset.pos_dataset import POSDataset
-from dataset.pos_processor import POSProcessor
+from dataset.processor import Processor
 from dataset.collate_fn import DataCollator
 import torch
 import torch.nn as nn
@@ -32,12 +31,9 @@ import matplotlib.pyplot as plt
 from transformers.utils import is_sagemaker_mp_enabled
 
 if is_sagemaker_mp_enabled():
-    import smdistributed.modelparallel.torch as smp
     from smdistributed.modelparallel import __version__ as SMP_VERSION
 
     IS_SAGEMAKER_MP_POST_1_10 = version.parse(SMP_VERSION) >= version.parse("1.10")
-
-    from transformers.trainer_pt_utils import smp_forward_backward, smp_forward_only, smp_gather, smp_nested_concat
 else:
     IS_SAGEMAKER_MP_POST_1_10 = False
 
@@ -45,7 +41,7 @@ from method.batch_concat import concatenate_batch
 from method.position_shift import random_shift
 
 if is_apex_available():
-    from apex import amp
+    pass
 
 os.environ['WANDB_LOG_MODEL'] = "true"
 
@@ -56,7 +52,7 @@ class TokenClassificationTrainer(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace,
                  dataset: Union[NERDataset, POSDataset],
                  train: Dataset, eval: Dataset,
-                 processor: Union[NERProcessor, POSProcessor], **kwargs):
+                 processor: Processor, **kwargs):
         # Args
         self.model_path = all_args.model
         self.max_length = all_args.max_length
@@ -224,12 +220,12 @@ def main():
         # Dataset
         if args.dataset in ["conll03", "ontonotes5"]:
             dataset = NERDataset(dataset=args.dataset, debugging=args.debugging)
-            processor = NERProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
-                                     kwargs=config)
+            processor = Processor(pretrained_checkpoint=args.model, type="ner", max_length=args.max_length,
+                                  kwargs=config)
         elif args.dataset in ["en_ewt", "tweebank"]:
             dataset = POSDataset(dataset=args.dataset, debugging=args.debugging)
-            processor = POSProcessor(pretrained_checkpoint=args.model, max_length=args.max_length,
-                                     kwargs=config)
+            processor = Processor(pretrained_checkpoint=args.model, type="pos", max_length=args.max_length,
+                                  kwargs=config)
         else:
             raise ValueError(f"Dataset {args.dataset} not supported")
 
