@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # List of Datasets
-DATASETS=("conll03" "ontonotes5")
+DATASETS=("conll03" "ontonotes5" "en_ewt" "tweebank")
 # List of Models
 MODELS=( "bigscience/bloom-560m" "gpt2" "gpt2-large")
 

@@ -78,9 +78,11 @@ class Processor(object):
             overflowing_tokens = tokenized_inputs.encodings[j].overflowing if hasattr(tokenized_inputs.encodings[j],
                                                                                       "overflowing") else None
             if overflowing_tokens and duplicate:
-                for item in [tokenized_inputs["input_ids"], tokenized_inputs["attention_mask"],
-                             tokenized_inputs["token_type_ids"],
-                             tokenized_inputs["overflow_to_sample_mapping"], tokenized_inputs.encodings]:
+                items = [tokenized_inputs["input_ids"], tokenized_inputs["attention_mask"],
+                             tokenized_inputs["overflow_to_sample_mapping"], tokenized_inputs.encodings]
+                if "token_type_ids" in tokenized_inputs:
+                    items.append(tokenized_inputs["token_type_ids"])
+                for item in items:
                     del item[j:j + 2]
                 continue
             label_ids = align_label(label, word_ids, label_all_tokens=label_all_tokens)
