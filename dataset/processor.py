@@ -82,8 +82,9 @@ class Processor(object):
                              tokenized_inputs["overflow_to_sample_mapping"], tokenized_inputs.encodings]
                 if "token_type_ids" in tokenized_inputs:
                     items.append(tokenized_inputs["token_type_ids"])
+                lth = len(overflowing_tokens)
                 for item in items:
-                    del item[j:j + 2]
+                    del item[j:j + lth + 1]
                 continue
             label_ids = align_label(label, word_ids, label_all_tokens=label_all_tokens)
             labels.append(label_ids)
@@ -130,17 +131,18 @@ class Processor(object):
                 "k": k_}
 
     def process_batch(self, examples, duplicate=False, k=2, mode="none"):
-        features_ = examples.data
+        examples_ =examples
+        features_ = examples_.data
         if duplicate:
             if mode in ["none", "sep"]:
                 data = self.duplicate_seq(features_, k=k, mode=mode, sep_token="[SEP]")
-                examples.data = data
+                examples_.data = data
 
-        return examples
+        return examples_
 
 
 if __name__ == '__main__':
-    checkpoint = "bert-base-uncased"
+    checkpoint = "bigscience/bloom-560m"
     # from dataset.ner_dataset import NERDataset
     #
     # ner_dataset = NERDataset(dataset="conll03", debugging=False)
@@ -170,7 +172,7 @@ if __name__ == '__main__':
 
     from dataset.pos_dataset import POSDataset
 
-    pos_dataset = POSDataset(dataset="en_ewt", debugging=False)
+    pos_dataset = POSDataset(dataset="tweebank", debugging=False)
 
     pos_processor = Processor(pretrained_checkpoint=checkpoint, type="pos", max_length=512,
                               kwargs={"truncation": True, })
