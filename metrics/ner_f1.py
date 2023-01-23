@@ -254,10 +254,7 @@ def _find_class_pos(labels, class_label):
 
 
 def compute_ner_pos_f1(p, label_list):
-    if len(p) < 3:
-        predictions_scores, labels= p
-    else:
-        predictions_scores, labels, inputs = p
+    predictions_scores, labels, inputs = p
     predictions = np.argmax(predictions_scores, axis=2)
 
     # Remove ignored index (special tokens)
