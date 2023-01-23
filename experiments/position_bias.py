@@ -95,13 +95,13 @@ class TokenClassificationTrainer(Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False):
         loss, outputs = super().compute_loss(model, inputs, return_outputs=True)
-        labels = inputs["labels"]
-        logits = outputs["logits"]
-        loss_per_pos = self.loss_pos_fn(logits, labels)
-        if self.is_in_train and not self.is_in_eval:
-            self.losses["train"].append(loss_per_pos)
-        else:
-            self.losses["dev"].append(loss_per_pos)
+        # labels = inputs["labels"]
+        # logits = outputs["logits"]
+        # loss_per_pos = self.loss_pos_fn(logits, labels)
+        # if self.is_in_train and not self.is_in_eval:
+        #     self.losses["train"].append(loss_per_pos)
+        # else:
+        #     self.losses["dev"].append(loss_per_pos)
         return (loss, outputs) if return_outputs else loss
 
     def training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
