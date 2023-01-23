@@ -46,7 +46,7 @@ python ${REPO}/experiments/position_bias.py \
   --evaluation_strategy ${EVAL_STRATEGY} \
   --save_strategy ${EVAL_STRATEGY} \
   --logging_strategy ${EVAL_STRATEGY} \
-  --position_embedding_type ${POS_EMB_TYPE} \
+  --include_inputs_for_metrics \
   --concatenate \
   --duplicate \
   --truncation \
