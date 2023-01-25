@@ -10,6 +10,7 @@ import torch
 from matplotlib.offsetbox import AnchoredText
 
 from dataset.ner_dataset import NERDataset, NERDatasetbuilder
+from dataset.pos_dataset import POSDataset, POSDatasetbuilder
 
 api = wandb.Api()
 
@@ -50,7 +51,7 @@ style = {"figure.figsize": (5, 3.75),
 sns.set(context='paper', style='white', font_scale=1.5, color_codes=True, rc=style)
 
 sns.set_theme(style="ticks")
-plots_dir = 'plots/files/'
+plots_dir = '/home/mehdi/Desktop/Workspace/plots/'
 os.makedirs(plots_dir, exist_ok=True)
 
 
@@ -81,6 +82,8 @@ def dataset_plot():
     os.makedirs(save_dir, exist_ok=True)
     conll03 = NERDataset(dataset="conll03")
     ontonotes5 = NERDataset(dataset="ontonotes5")
+    en_ewt = POSDataset(dataset="en_ewt")
+    tweebank = POSDataset(dataset="tweebank")
 
     # Datasets statistics
     conll03_seq = pd.DataFrame(conll03.sequence_lengths, columns=["seq_lengths"])
@@ -91,7 +94,7 @@ def dataset_plot():
     ax_hist.set(xlabel='Sequence lengths', ylabel='Count')
 
     plt.legend()
-    f.savefig(save_dir + 'conll03_seq_lengths.pdf')
+    f.savefig(save_dir + '/conll03_seq_lengths.pdf')
 
     ontonotes5_seq = pd.DataFrame(ontonotes5.sequence_lengths, columns=["seq_lengths"])
     f, ax_hist = plt.subplots(1, figsize=(3.54, 2.65))
@@ -101,11 +104,43 @@ def dataset_plot():
     ax_hist.set(xlabel='Sequence lengths', ylabel='Count')
 
     plt.legend()
-    f.savefig(save_dir + 'ontonotes5_seq_lengths.pdf')
+    f.savefig(save_dir + '/ontonotes5_seq_lengths.pdf')
+
+    en_ewt_seq = pd.DataFrame(en_ewt.sequence_lengths, columns=["seq_lengths"])
+    f, ax_hist = plt.subplots(1, figsize=(3.54, 2.65))
+    sns.histplot(en_ewt_seq["seq_lengths"], ax=ax_hist,
+                 edgecolor='black')
+
+    ax_hist.set(xlabel='Sequence lengths', ylabel='Count')
+
+    plt.legend()
+    f.savefig(save_dir + '/en_ewt_seq_lengths.pdf')
+
+    tweebank_seq = pd.DataFrame(tweebank.sequence_lengths, columns=["seq_lengths"])
+    f, ax_hist = plt.subplots(1, figsize=(3.54, 2.65))
+    sns.histplot(tweebank_seq["seq_lengths"], ax=ax_hist,
+                 edgecolor='black')
+
+    ax_hist.set(xlabel='Sequence lengths', ylabel='Count')
+
+    plt.legend()
+    f.savefig(save_dir + '/tweebank_seq_lengths.pdf')
 
     df = pd.DataFrame(
-        [(x, "conll03") for x in conll03.sequence_lengths] + [(x, "ontonotes5") for x in ontonotes5.sequence_lengths],
+        [(x, "conll03") for x in conll03.sequence_lengths] + [(x, "ontonotes5") for x in
+                                                              ontonotes5.sequence_lengths] + [(x, "en_ewt") for x in
+                                                                                              en_ewt.sequence_lengths] + [
+            (x, "tweebank") for x in tweebank.sequence_lengths],
         columns=["seq_lengths", "dataset"])
+
+    #Histogram
+    f, ax = plt.subplots(figsize=(5, 3.75))
+    sns.histplot(data=df, x="seq_lengths", hue="dataset", bins=30, palette="Set2", multiple="stack")
+    labels = [item.get_text() for item in ax.get_yticklabels()]
+    labels_ = [str(int(int(l) / 1000)) for l in labels]
+    ax.set_yticklabels(labels_)
+    ax.set(xlabel='Word Positions', ylabel='Count ($10^3$)')
+    f.savefig(save_dir + '/hist_seq_lengths.pdf')
 
     f, ax = plt.subplots(figsize=(7.25, 2.43))
 
@@ -114,8 +149,8 @@ def dataset_plot():
                 width=.3, palette="vlag", whis=[0, 100])
 
     # Tweak the visual presentation
-    ax.set(ylabel="", xlabel='Sequence lengths')
-    f.savefig(save_dir + 'seq_lengths.pdf')
+    ax.set(ylabel="", xlabel='Word Positions')
+    f.savefig(save_dir + '/seq_lengths.pdf')
 
     # Class distribution
     def find_class_pos(labels, class_label, id2label):
@@ -139,15 +174,27 @@ def dataset_plot():
     dfs = []
     for cls, pos in pos_dist.items():
         dfs += [(x, cls) for x in pos]
-    dff = pd.DataFrame(dfs, columns=["position", "class"])
+    conll03_cls = pd.DataFrame(dfs, columns=["position", "class"])
+
+    # Histogram
+    f, ax = plt.subplots(figsize=(3.54, 2.65))
+    # Plot the orbital period with horizontal boxes
+    sns.histplot(data=conll03_cls.loc[conll03_cls["class"].isin(["PER", "MISC"])], x="position", hue="class", palette="Set2",
+                 multiple="layer", stat="count", bins=20)
+    # Tweak the visual presentation
+    labels = [item.get_text() for item in ax.get_yticklabels()]
+    labels_ = [str(int(int(l) / 1000)) for l in labels]
+    ax.set_yticklabels(labels_)
+    ax.set(ylabel="Count ($10^3$)", xlabel='Positions')
+    f.savefig(save_dir + '/conll03_class_dist.pdf')
 
     f, ax = plt.subplots(figsize=(3.54, 2.65))
     # Plot the orbital period with horizontal boxes
-    sns.boxplot(data=dff, x="position", y="class",
+    sns.boxplot(data=conll03_cls, x="position", y="class",
                 width=.4, palette="Set2", whis=[0, 100])
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
-    f.savefig(save_dir + 'conll03.pdf')
+    f.savefig(save_dir + '/conll03.pdf')
 
     # Ontonotes
 
@@ -169,15 +216,26 @@ def dataset_plot():
     dfs = []
     for cls, pos in pos_dist2.items():
         dfs += [(x, cls) for x in pos]
-    dff = pd.DataFrame(dfs, columns=["position", "class"])
+    ontonotes_cls = pd.DataFrame(dfs, columns=["position", "class"])
+
+
+    # Histogram
+    f, ax = plt.subplots(figsize=(3.54, 2.65))
+    # Plot the orbital period with horizontal boxes
+    sns.histplot(data=ontonotes_cls.loc[ontonotes_cls["class"].isin(["LAW", "EVENT", "WORK_OF_ART"])], x="position",
+                 hue="class",
+                 palette="Set2",
+                 multiple="layer", stat="count", bins=20)
+    ax.set(ylabel="Count", xlabel='Positions')
+    f.savefig(save_dir + '/ontonotes_class_dist.pdf')
 
     f, ax = plt.subplots(figsize=(7.25, 5.43))
     # Plot the orbital period with horizontal boxes
-    sns.boxplot(data=dff, x="position", y="class",
+    sns.boxplot(data=ontonotes_cls, x="position", y="class",
                 width=.4, palette="Set2", whis=[0, 100])
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
-    f.savefig(save_dir + 'ontonotes.pdf')
+    f.savefig(save_dir + '/ontonotes.pdf')
 
 
 def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonotes5"):
@@ -570,12 +628,13 @@ def attn_analysis(dataset="conll03"):
         if run.state == "finished":
             seq_path = wandb.restore("seq_info.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
             seq_info = torch.load(seq_path.name)
-            attn_path = wandb.restore("attention_scores.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            attn_path = wandb.restore("attention_scores.pt", run_path="/".join(run.path),
+                                      root=os.path.join(save_dir, run.id))
             attention_scores = torch.load(attn_path.name)
             for i, attns in enumerate(attention_scores):
                 for layer, attn_scores in enumerate(attns.items):
-
                     print("here")
+
 
 def emb_analysis(dataset="conll03"):
     experiment = "bert_position_bias_eval"
@@ -586,7 +645,6 @@ def emb_analysis(dataset="conll03"):
     labels.remove("O")
     entity = "benamor"  # set to your entity and project
     runs = api.runs(entity + "/" + experiment + "-" + dataset)
-
 
     df = []
     df1 = []
@@ -600,12 +658,13 @@ def emb_analysis(dataset="conll03"):
             seq_path = wandb.restore("seq_info.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
             seq_info = torch.load(seq_path.name)
             pos_cos_path = wandb.restore("pos_cos.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
-            word_cos_path = wandb.restore("word_cos.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
+            word_cos_path = wandb.restore("word_cos.pt", run_path="/".join(run.path),
+                                          root=os.path.join(save_dir, run.id))
             pos_embeddings = torch.load(pos_cos_path.name)
             word_embeddings = torch.load(word_cos_path.name)
             for i, embs in enumerate(pos_embeddings):
                 for k, emb_cos in embs.items():
-                    first_token = emb_cos[0,:]
+                    first_token = emb_cos[0, :]
                     avg_token = emb_cos.mean(axis=0)
                     for j, cos_sim in enumerate(first_token):
                         pos_df.append([i, k.split("=")[-1], j, cos_sim, avg_token[j]])
@@ -615,7 +674,6 @@ def emb_analysis(dataset="conll03"):
                     avg_token = emb_cos.mean(axis=0)
                     for j, cos_sim in enumerate(first_token):
                         word_df.append([i, k.split("=")[-1], j, cos_sim, avg_token[j]])
-
 
             pos_df = pd.DataFrame(pos_df, columns=["id", "batch_pos", "layer", "first_token", "avg_sim"])
             pos_df['run'] = run.name
@@ -628,9 +686,9 @@ def emb_analysis(dataset="conll03"):
     pos_df = pd.concat(df)
     word_df = pd.concat(df1)
 
-    f, ax = plt.subplots(figsize=(5,3.75))
-    sns.lineplot(data=pos_df[pos_df["layer"]==12], x="batch_pos", y="first_token", ax=ax,  label="position embeddings")
-    sns.lineplot(data=word_df[word_df["layer"] == 12], x="batch_pos", y="first_token", ax=ax,  label="word embeddings")
+    f, ax = plt.subplots(figsize=(5, 3.75))
+    sns.lineplot(data=pos_df[pos_df["layer"] == 12], x="batch_pos", y="first_token", ax=ax, label="position embeddings")
+    sns.lineplot(data=word_df[word_df["layer"] == 12], x="batch_pos", y="first_token", ax=ax, label="word embeddings")
 
     ax.set(ylabel=f"Cosine Similarity", xlabel='Batch(k) Position')
     # Per k factor
@@ -646,12 +704,10 @@ def emb_analysis(dataset="conll03"):
     f.savefig(os.path.join(save_dir, f'pos_cos_avg_token.pdf'))
 
 
-
-
 if __name__ == "__main__":
-    # dataset_plot()
+    dataset_plot()
     # bias_experiment()
     # bias_experiment_k(dataset="conll03")
     # bias_experiment_k(dataset="ontonotes5")
-    emb_analysis(dataset="conll03")
+    # emb_analysis(dataset="conll03")
     # attn_analysis(dataset="conll03")
