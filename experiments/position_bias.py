@@ -4,7 +4,7 @@
 #
 from utils import set_random_seed
 
-set_random_seed(23456)
+
 from plot_utils.plot import plot_loss_dist
 import pandas as pd
 import argparse
@@ -47,6 +47,7 @@ os.environ['WANDB_LOG_MODEL'] = "true"
 
 # os.environ['WANDB_DISABLED'] = "true"
 
+seeds = [23456, 34567, 45678, 56789, 67890]
 
 class TokenClassificationTrainer(Trainer):
     def __init__(self, training_args: TrainingArguments, all_args: argparse.Namespace,
@@ -212,6 +213,7 @@ def main():
             f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}",
             f"duplicate={args.duplicate}"]
     for i in range(args.nbruns):
+        set_random_seed(seeds[i])
         config = vars(args)
         wandb.init(project=experiment_name, name=f"run={i + 1}", tags=tags,
                    config=config)
