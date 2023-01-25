@@ -209,13 +209,14 @@ def main():
     os.environ["WANDB_DIR"] = training_args.output_dir
     experiment_name = f"{args.model.split('/')[-1]}-{args.experiment}-{args.dataset}"
     tags = [f"max_length={args.max_length}", f"truncate={args.truncation}",
-            f"padding={args.padding}", f"seed={training_args.seed}",
+            f"padding={args.padding}",
             f"padding_side={args.padding_side}", f"pos_emb_type={args.position_embedding_type}",
             f"duplicate={args.duplicate}"]
     for i in range(args.nbruns):
+        tags.append(f"seed={seeds[i]}")
         set_random_seed(seeds[i])
         config = vars(args)
-        wandb.init(project=experiment_name, name=f"run={i + 1}", tags=tags,
+        wandb.init(project=experiment_name, name=f"seed_run={i + 1}", tags=tags,
                    config=config)
         print(f"Run number:{i + 1}")
 

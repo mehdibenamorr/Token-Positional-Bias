@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # List of Datasets
-#DATASETS=("conll03" "ontonotes5" "en_ewt" "tweebank")
 DATASETS=("conll03" "ontonotes5" "en_ewt" "tweebank")
 # List of Models
-#MODELS=("bert-base-uncased" "google/electra-base-discriminator" "nghuyong/ernie-2.0-base-en" "zhiheng-huang/bert-base-uncased-embedding-relative-key" "zhiheng-huang/bert-base-uncased-embedding-relative-key-query")
-MODELS=("bert-base-uncased")
+MODELS=("bert-base-uncased" "google/electra-base-discriminator" "nghuyong/ernie-2.0-base-en" "zhiheng-huang/bert-base-uncased-embedding-relative-key" "zhiheng-huang/bert-base-uncased-embedding-relative-key-query")
 
 # Evaluation
 for DATASET in "${DATASETS[@]}"; do
