@@ -99,7 +99,7 @@ def dataset_plot():
     ontonotes5_seq = pd.DataFrame(ontonotes5.sequence_lengths, columns=["seq_lengths"])
     f, ax_hist = plt.subplots(1, figsize=(3.54, 2.65))
     sns.histplot(ontonotes5_seq["seq_lengths"], ax=ax_hist,
-                 edgecolor='black')
+                 edgecolor='black', bins=50)
 
     ax_hist.set(xlabel='Sequence lengths', ylabel='Count')
 
@@ -133,7 +133,7 @@ def dataset_plot():
             (x, "tweebank") for x in tweebank.sequence_lengths],
         columns=["seq_lengths", "dataset"])
 
-    #Histogram
+    # Histogram
     f, ax = plt.subplots(figsize=(5, 3.75))
     sns.histplot(data=df, x="seq_lengths", hue="dataset", bins=30, palette="Set2", multiple="stack")
     labels = [item.get_text() for item in ax.get_yticklabels()]
@@ -142,14 +142,14 @@ def dataset_plot():
     ax.set(xlabel='Word Positions', ylabel='Count ($10^3$)')
     f.savefig(save_dir + '/hist_seq_lengths.pdf')
 
-    f, ax = plt.subplots(figsize=(7.25, 2.43))
+    f, ax = plt.subplots(figsize=(5.25, 2.43))
 
     # Plot the orbital period with horizontal boxes
     sns.boxplot(x="seq_lengths", y="dataset", data=df,
                 width=.3, palette="vlag", whis=[0, 100])
 
     # Tweak the visual presentation
-    ax.set(ylabel="", xlabel='Word Positions')
+    ax.set(ylabel="", xlabel='Sequence length')
     f.savefig(save_dir + '/seq_lengths.pdf')
 
     # Class distribution
@@ -174,12 +174,13 @@ def dataset_plot():
     dfs = []
     for cls, pos in pos_dist.items():
         dfs += [(x, cls) for x in pos]
-    conll03_cls = pd.DataFrame(dfs, columns=["position", "class"])
+    conll03_cls = pd.DataFrame(dfs, columns=["position", "NE tag"])
 
     # Histogram
     f, ax = plt.subplots(figsize=(3.54, 2.65))
     # Plot the orbital period with horizontal boxes
-    sns.histplot(data=conll03_cls.loc[conll03_cls["class"].isin(["PER", "MISC"])], x="position", hue="class", palette="Set2",
+    sns.histplot(data=conll03_cls.loc[conll03_cls["NE tag"].isin(["PER", "MISC"])], x="position", hue="NE tag",
+                 palette="Set2",
                  multiple="layer", stat="count", bins=20)
     # Tweak the visual presentation
     labels = [item.get_text() for item in ax.get_yticklabels()]
@@ -190,8 +191,8 @@ def dataset_plot():
 
     f, ax = plt.subplots(figsize=(3.54, 2.65))
     # Plot the orbital period with horizontal boxes
-    sns.boxplot(data=conll03_cls, x="position", y="class",
-                width=.4, palette="Set2", whis=[0, 100])
+    sns.boxplot(data=conll03_cls, x="position", y="NE tag",
+                width=.4, palette="colorblind", whis=[0, 100])
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
     f.savefig(save_dir + '/conll03.pdf')
@@ -216,85 +217,115 @@ def dataset_plot():
     dfs = []
     for cls, pos in pos_dist2.items():
         dfs += [(x, cls) for x in pos]
-    ontonotes_cls = pd.DataFrame(dfs, columns=["position", "class"])
-
+    ontonotes_cls = pd.DataFrame(dfs, columns=["position", "NE tag"])
 
     # Histogram
     f, ax = plt.subplots(figsize=(3.54, 2.65))
     # Plot the orbital period with horizontal boxes
-    sns.histplot(data=ontonotes_cls.loc[ontonotes_cls["class"].isin(["LAW", "EVENT", "WORK_OF_ART"])], x="position",
-                 hue="class",
+    sns.histplot(data=ontonotes_cls.loc[ontonotes_cls["NE tag"].isin(["LAW", "EVENT", "WORK_OF_ART"])], x="position",
+                 hue="NE tag",
                  palette="Set2",
-                 multiple="layer", stat="count", bins=20)
+                 multiple="layer", stat="count", bins=20, hue_order=["LAW", "EVENT", "WORK_OF_ART"])
     ax.set(ylabel="Count", xlabel='Positions')
     f.savefig(save_dir + '/ontonotes_class_dist.pdf')
 
     f, ax = plt.subplots(figsize=(7.25, 5.43))
     # Plot the orbital period with horizontal boxes
-    sns.boxplot(data=ontonotes_cls, x="position", y="class",
-                width=.4, palette="Set2", whis=[0, 100])
+    sns.boxplot(data=ontonotes_cls, x="position", y="NE tag",
+                width=.4, palette="colorblind", whis=[0, 100])
     # Tweak the visual presentation
     ax.set(ylabel="", xlabel='Positions')
     f.savefig(save_dir + '/ontonotes.pdf')
 
+    # TWEETBANK
+    train3 = tweebank.train()
+    classes = ["ADJ", "NOUN", "VERB", "ADV", "PRON", "DET", "ADP", "NUM", "CCONJ", "X", "INTJ", "SYM", "PUNCT", "PART",
+               "AUX", "PROPN", "SCONJ"]
+    id2label = tweebank.id2label
+    pos_tags = train3["pos_tags"]
+    pos_dist3 = dict()
+    for cls in classes:
+        positions = []
+        for labels in pos_tags:
+            positions += find_class_pos(labels, cls, id2label)
+        pos_dist3[cls] = positions
+    dfs = []
+    for cls, pos in pos_dist3.items():
+        dfs += [(x, cls) for x in pos]
+    tweetbank_cls = pd.DataFrame(dfs, columns=["position", "POS tag"])
 
-def bias_experiment(experiment="bert_position_bias_synthetic", dataset="ontonotes5"):
-    save_dir = os.path.join(plots_dir, experiment, dataset)
+    # Histogram
+    f, ax = plt.subplots(figsize=(3.54, 2.65))
+    # Plot the orbital period with horizontal boxes
+    sns.histplot(data=tweetbank_cls.loc[tweetbank_cls["POS tag"].isin(["PROPN", "NOUN", "ADJ"])], x="position",
+                 hue="POS tag",
+                 palette="Set2",
+                 multiple="layer", stat="count", bins=20, hue_order=["ADJ", "PROPN", "NOUN"])
+    ax.set(ylabel="Count", xlabel='Positions')
+    f.savefig(save_dir + '/tweetbank_class_dist.pdf')
+
+    f, ax = plt.subplots(figsize=(7.25, 5.43))
+    # Plot the orbital period with horizontal boxes
+    sns.boxplot(data=tweetbank_cls, x="position", y="POS tag",
+                width=.4, palette="Set2", whis=[0, 100])
+    # Tweak the visual presentation
+    ax.set(ylabel="", xlabel='Positions')
+    f.savefig(save_dir + '/tweetbank.pdf')
+
+    # UD
+    train4 = en_ewt.train()
+    classes = ["ADJ", "NOUN", "VERB", "ADV", "PRON", "DET", "ADP", "NUM", "CCONJ", "X", "INTJ", "SYM", "PUNCT", "PART",
+               "AUX", "PROPN", "SCONJ"]
+    id2label = en_ewt.id2label
+    pos_tags = train4["pos_tags"]
+    pos_dist4 = dict()
+    for cls in classes:
+        positions = []
+        for labels in pos_tags:
+            positions += find_class_pos(labels, cls, id2label)
+        pos_dist4[cls] = positions
+    dfs = []
+    for cls, pos in pos_dist4.items():
+        dfs += [(x, cls) for x in pos]
+    ud_cls = pd.DataFrame(dfs, columns=["position", "POS tag"])
+
+    # Histogram
+    f, ax = plt.subplots(figsize=(3.54, 2.65))
+    # Plot the orbital period with horizontal boxes
+    sns.histplot(data=ud_cls.loc[ud_cls["POS tag"].isin(["PRON", "NOUN"])], x="position",
+                 hue="POS tag",
+                 palette="Set2",
+                 multiple="layer", stat="count", bins=20, hue_order=["PRON", "NOUN"])
+    # Tweak the visual presentation
+    labels = [item.get_text() for item in ax.get_yticklabels()]
+    labels_ = [str(int(int(l) / 1000)) for l in labels]
+    ax.set_yticklabels(labels_)
+    ax.set(ylabel="Count ($10^3$)", xlabel='Positions')
+    f.savefig(save_dir + '/ud_class_dist.pdf')
+
+    f, ax = plt.subplots(figsize=(7.25, 5.43))
+    # Plot the orbital period with horizontal boxes
+    sns.boxplot(data=ud_cls, x="position", y="POS tag",
+                width=.4, palette="Set2", whis=[0, 100])
+    # Tweak the visual presentation
+    ax.set(ylabel="", xlabel='Positions')
+    f.savefig(save_dir + '/ud.pdf')
+
+
+def bias_experiment_k(dataset="conll03", model="bert-base-cased"):
+    experiment = "position_bias"
+    model = f"{model.split('/')[-1]}"
+    save_dir = os.path.join(plots_dir, experiment, dataset, model)
     os.makedirs(save_dir, exist_ok=True)
-    labels = NERDatasetbuilder.get_labels(dataset=dataset)
-    labels = list(np.unique([l.split("-")[-1] for l in labels]))
-    entity = "benamor"  # set to your entity and project
-    runs = api.runs(entity + "/" + experiment + "-" + dataset)
-
-    # Per Class distribution f1 score for max and min
-    # api.runs(
-    #     path="my_entity/my_project",
-    #     filters={"display_name": {"$regex": "^foo.*"}}
-    # )
-
-    summary_list, config_list, name_list = [], [], []
-    for run in runs:
-        # .summary contains the output keys/values for metrics like accuracy.
-        #  We call ._json_dict to omit large files
-        if run.state == "finished":
-            summary_list.append(run.summary._json_dict)
-            df = run.history()
-            dfs = []
-            for k in range(1, 11):
-                df_ = run.history(keys=[key for key in df.keys() if key.startswith(f"test/k={k}_")])
-                df_.columns = [col.split(f"={k}_")[-1] for col in df_.columns]
-                df_["k"] = k
-                dfs.append(df_)
-
-            results = pd.concat(dfs)
-
-            f, ax = plt.subplots(figsize=(3.54, 2.65))
-            # Plot the orbital period with horizontal boxes
-            sns.lineplot(data=results, x="k", y="overall_f1",
-                         palette="Set2", markers=True)
-            # Tweak the visual presentation
-            ax.set(ylabel="F1", xlabel='k')
-            f.savefig(save_dir + f'{dataset}_f1.jpg')
-            for cls in labels:
-                if cls != "O":
-                    f, ax = plt.subplots(figsize=(3.54, 2.65))
-                    # Plot the orbital period with horizontal boxes
-                    sns.lineplot(data=results, x="k", y=f"{cls}.f1",
-                                 palette="Set2", markers=True)
-                    # Tweak the visual presentation
-                    ax.set(ylabel=f"F1({cls})", xlabel='k')
-                    f.savefig(save_dir + f'{dataset}_{cls}_f1.jpg')
-
-
-def bias_experiment_k(dataset="conll03"):
-    experiment = "bert_position_bias_no_cv"
-    save_dir = os.path.join(plots_dir, experiment, dataset)
-    os.makedirs(save_dir, exist_ok=True)
-    labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    if dataset in ["conll03", "ontonotes5"]:
+        labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    else:
+        labels = POSDatasetbuilder.get_labels(dataset=dataset)
     labels = list(np.unique([l.split("-")[-1] for l in labels]))
     labels.remove("O")
+    reference = f"{model}-{experiment}-{dataset}"
     entity = "benamor"  # set to your entity and project
-    runs = api.runs(entity + "/" + experiment + "-" + dataset)
+    runs = api.runs(entity + "/" + reference)
 
     summary_list, config_list, name_list = [], [], []
     runs_dfs = []
@@ -345,8 +376,25 @@ def bias_experiment_k(dataset="conll03"):
     df = pd.concat(runs_dfs)
     df.to_csv(os.path.join(save_dir, "results.csv"))
 
+    return df
+
+
+def bias_experiment_k_plot(df):
+    experiment = "position_bias"
+    save_dir = os.path.join(plots_dir, experiment)
+    os.makedirs(save_dir, exist_ok=True)
+
     # HeatMaps
-    ## Batch Performance per k
+    ## Batch Performance per k Table
+    batch_performance_summary = df[df["batch_pos"] != 0][["model", "dataset", "overall_f1", "batch_pos"]].groupby(
+        ["model", "dataset", "batch_pos"]).agg(
+        [np.mean, np.std]) * 100
+    batch_performance_summary.to_csv(os.path.join(save_dir, "batch_performance_summary.csv"))
+    ## Overall Performance per k Table
+    overall_performance_summary = df[df["batch_pos"] == 0][["model", "dataset", "overall_f1", "k"]].groupby(
+        ["model", "dataset", "k"]).agg(
+        [np.mean, np.std]) * 100
+    overall_performance_summary.to_csv(os.path.join(save_dir, "overall_performance_summary.csv"))
     ### F1 measure
     perf_batch_pos_mean = df.pivot_table(index="k", columns="batch_pos", values="overall_f1", aggfunc=np.mean)
     matrix = perf_batch_pos_mean.iloc[:, 1:].values
@@ -473,6 +521,12 @@ def bias_experiment_k(dataset="conll03"):
     plt.close()
 
     # Correct and total agreement per class
+    if dataset in ["conll03", "ontonotes"]:
+        labels = NERDatasetbuilder.get_labels(dataset=dataset)
+    else:
+        labels = POSDatasetbuilder.get_labels(dataset=dataset)
+    labels = list(np.unique([l.split("-")[-1] for l in labels]))
+    labels.remove("O")
     for cls in labels:
         correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.correct",
                                                 aggfunc=np.mean)
@@ -610,32 +664,6 @@ def bias_experiment_k(dataset="conll03"):
     plt.close()
 
 
-def attn_analysis(dataset="conll03"):
-    experiment = "bert_position_bias_eval"
-    save_dir = os.path.join(plots_dir, experiment, dataset)
-    os.makedirs(save_dir, exist_ok=True)
-    labels = NERDatasetbuilder.get_labels(dataset=dataset)
-    labels = list(np.unique([l.split("-")[-1] for l in labels]))
-    labels.remove("O")
-    entity = "benamor"  # set to your entity and project
-    runs = api.runs(entity + "/" + experiment + "-" + dataset)
-
-    attention_df = []
-    general_info = []
-    for run in runs:
-        # .summary contains the output keys/values for metrics like accuracy.
-        #  We call ._json_dict to omit large files
-        if run.state == "finished":
-            seq_path = wandb.restore("seq_info.pt", run_path="/".join(run.path), root=os.path.join(save_dir, run.id))
-            seq_info = torch.load(seq_path.name)
-            attn_path = wandb.restore("attention_scores.pt", run_path="/".join(run.path),
-                                      root=os.path.join(save_dir, run.id))
-            attention_scores = torch.load(attn_path.name)
-            for i, attns in enumerate(attention_scores):
-                for layer, attn_scores in enumerate(attns.items):
-                    print("here")
-
-
 def emb_analysis(dataset="conll03"):
     experiment = "bert_position_bias_eval"
     save_dir = os.path.join(plots_dir, experiment, dataset)
@@ -705,9 +733,27 @@ def emb_analysis(dataset="conll03"):
 
 
 if __name__ == "__main__":
-    dataset_plot()
-    # bias_experiment()
-    # bias_experiment_k(dataset="conll03")
+    # dataset_plot()
+    models = ["bert-base-uncased", "google/electra-base-discriminator", "nghuyong/ernie-2.0-base-en",
+              "zhiheng-huang/bert-base-uncased-embedding-relative-key",
+              "zhiheng-huang/bert-base-uncased-embedding-relative-key-query", "bigscience/bloom-560m", "gpt2",
+              "gpt2-large"]
+    model_names = ["BERT", "Electra", "ERNIE", "BERT-Relative-Key", "BERT-Relative-Key-Query", "Bloom", "GPT2",
+                   "GPT2-Large"]
+    datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
+    # dfs = []
+    # for dataset in datasets:
+    #     dffs = []
+    #     for i,model in enumerate(models):
+    #         df = bias_experiment_k(model=model, dataset=dataset)
+    #         df["model"] = model_names[i]
+    #         dffs.append(df)
+    #     dff = pd.concat(dffs)
+    #     dff["dataset"] = dataset
+    #     dfs.append(dff)
+    # df = pd.concat(dfs)
+    # df.to_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
+    df = pd.read_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
+    bias_experiment_k_plot(df)
     # bias_experiment_k(dataset="ontonotes5")
     # emb_analysis(dataset="conll03")
-    # attn_analysis(dataset="conll03")
