@@ -312,8 +312,7 @@ def dataset_plot():
     f.savefig(save_dir + '/ud.pdf')
 
 
-def bias_experiment_k(dataset="conll03", model="bert-base-cased"):
-    experiment = "position_bias"
+def bias_experiment_k(dataset="conll03", model="bert-base-cased", experiment="position_bias"):
     model = f"{model.split('/')[-1]}"
     save_dir = os.path.join(plots_dir, experiment, dataset, model)
     os.makedirs(save_dir, exist_ok=True)
@@ -379,8 +378,7 @@ def bias_experiment_k(dataset="conll03", model="bert-base-cased"):
     return df
 
 
-def bias_experiment_k_plot(df):
-    experiment = "position_bias"
+def bias_experiment_k_plot(df, experiment="position_bias"):
     save_dir = os.path.join(plots_dir, experiment)
     os.makedirs(save_dir, exist_ok=True)
 
@@ -732,28 +730,41 @@ def emb_analysis(dataset="conll03"):
     f.savefig(os.path.join(save_dir, f'pos_cos_avg_token.pdf'))
 
 
-if __name__ == "__main__":
-    # dataset_plot()
-    models = ["bert-base-uncased", "google/electra-base-discriminator", "nghuyong/ernie-2.0-base-en",
-              "zhiheng-huang/bert-base-uncased-embedding-relative-key",
-              "zhiheng-huang/bert-base-uncased-embedding-relative-key-query", "bigscience/bloom-560m", "gpt2",
-              "gpt2-large"]
+def get_results(models, datasets, experiment="position_bias"):
     model_names = ["BERT", "Electra", "ERNIE", "BERT-Relative-Key", "BERT-Relative-Key-Query", "Bloom", "GPT2",
                    "GPT2-Large"]
+    dfs = []
+    for dataset in datasets:
+        dffs = []
+        for i,model in enumerate(models):
+            df = bias_experiment_k(model=model, dataset=dataset, experiment=experiment)
+            df["model"] = model_names[i]
+            dffs.append(df)
+        dff = pd.concat(dffs)
+        dff["dataset"] = dataset
+        dfs.append(dff)
+    df = pd.concat(dfs)
+    df.to_csv(os.path.join(plots_dir, f"bert_{experiment}_eval.csv"))
+    return df
+
+if __name__ == "__main__":
+    # dataset_plot()
+    # models = ["bert-base-uncased", "google/electra-base-discriminator", "nghuyong/ernie-2.0-base-en",
+    #           "zhiheng-huang/bert-base-uncased-embedding-relative-key",
+    #           "zhiheng-huang/bert-base-uncased-embedding-relative-key-query", "bigscience/bloom-560m", "gpt2",
+    #           "gpt2-large"]
+    # datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
+    # pos_bias = get_results(models, datasets, experiment="position_bias")
+    # pos_bias = pd.read_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
+    # bias_experiment_k_plot(pos_bias, experiment="position_bias")
+
+    models = ["bert-base-uncased"]
     datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
-    # dfs = []
-    # for dataset in datasets:
-    #     dffs = []
-    #     for i,model in enumerate(models):
-    #         df = bias_experiment_k(model=model, dataset=dataset)
-    #         df["model"] = model_names[i]
-    #         dffs.append(df)
-    #     dff = pd.concat(dffs)
-    #     dff["dataset"] = dataset
-    #     dfs.append(dff)
-    # df = pd.concat(dfs)
-    # df.to_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
-    df = pd.read_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
-    bias_experiment_k_plot(df)
-    # bias_experiment_k(dataset="ontonotes5")
+    # finetune_shift = get_results(models, datasets, experiment="finetune_shift")
+    # finetune_concat = get_results(models, datasets, experiment="finetune_concat")
+    finetune_shift = pd.read_csv(os.path.join(plots_dir, "bert_finetune_shift_eval.csv"))
+    finetune_concat = pd.read_csv(os.path.join(plots_dir, "bert_finetune_concat_eval.csv"))
+    bias_experiment_k_plot(finetune_shift, experiment="finetune_shift")
+    bias_experiment_k_plot(finetune_concat, experiment="finetune_concat")
+
     # emb_analysis(dataset="conll03")
