@@ -133,9 +133,12 @@ def dataset_plot():
             (x, "tweebank") for x in tweebank.sequence_lengths],
         columns=["seq_lengths", "dataset"])
 
+    benchmarks = {"conll03": "CoNLL03", "ontonotes5": "OntoNotes5.0", "en_ewt": "UD_en", "tweebank": "TweeBank"}
+    df["dataset"] = df["dataset"].map(benchmarks)
     # Histogram
     f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.histplot(data=df, x="seq_lengths", hue="dataset", bins=30, palette="Set2", multiple="stack")
+    sns.histplot(data=df[df["seq_lengths"] < 100], x="seq_lengths", hue="dataset", palette="Set2", multiple="dodge",
+                 bins=20)
     labels = [item.get_text() for item in ax.get_yticklabels()]
     labels_ = [str(int(int(l) / 1000)) for l in labels]
     ax.set_yticklabels(labels_)
@@ -382,141 +385,89 @@ def bias_experiment_k_plot(df, experiment="position_bias"):
     save_dir = os.path.join(plots_dir, experiment)
     os.makedirs(save_dir, exist_ok=True)
 
+    benchmarks = {"conll03": "CoNLL03", "ontonotes5": "OntoNotes5.0", "en_ewt": "UD_en", "tweebank": "TweeBank"}
+    df["dataset"] = df["dataset"].map(benchmarks)
+
     # HeatMaps
-    ## Batch Performance per k Table
-    batch_performance_summary = df[df["batch_pos"] != 0][["model", "dataset", "overall_f1", "batch_pos"]].groupby(
+    ## Batch Performance per alpha_k Table
+    batch_f1_summary = df[df["batch_pos"] != 0][["model", "dataset", "overall_f1", "batch_pos"]].groupby(
         ["model", "dataset", "batch_pos"]).agg(
         [np.mean, np.std]) * 100
-    batch_performance_summary.to_csv(os.path.join(save_dir, "batch_performance_summary.csv"))
+    batch_f1_summary.to_csv(os.path.join(save_dir, "batch_performance_summary.csv"))
     ## Overall Performance per k Table
-    overall_performance_summary = df[df["batch_pos"] == 0][["model", "dataset", "overall_f1", "k"]].groupby(
+    overall_f1_summary = df[df["batch_pos"] == 0][["model", "dataset", "overall_f1", "k"]].groupby(
         ["model", "dataset", "k"]).agg(
         [np.mean, np.std]) * 100
-    overall_performance_summary.to_csv(os.path.join(save_dir, "overall_performance_summary.csv"))
-    ### F1 measure
-    perf_batch_pos_mean = df.pivot_table(index="k", columns="batch_pos", values="overall_f1", aggfunc=np.mean)
-    matrix = perf_batch_pos_mean.iloc[:, 1:].values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    perf_batch_pos_mean.iloc[:, 1:] = matrix
-    perf_batch_pos_std = df.pivot_table(index="k", columns="batch_pos", values="overall_f1", aggfunc=np.std)
-    matrix = perf_batch_pos_std.iloc[:, 1:].values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    perf_batch_pos_std.iloc[:, 1:] = matrix
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=perf_batch_pos_mean * 100, annot=perf_batch_pos_std.values * 100, fmt=".2f", robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(xticklabels=(["all"] + [str(i) for i in range(1, 11)]))
-    ax.set(ylabel="$k$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_batch_f1_pos.pdf'))
-    plt.close()
+    overall_f1_summary.to_csv(os.path.join(save_dir, "overall_performance_summary.csv"))
 
-    ### Precision and Recall
-    precision_batch_pos_mean = df.pivot_table(index="k", columns="batch_pos", values="overall_precision",
-                                              aggfunc=np.mean)
-    matrix = precision_batch_pos_mean.iloc[:, 1:].values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    precision_batch_pos_mean.iloc[:, 1:] = matrix
-    precision_batch_pos_std = df.pivot_table(index="k", columns="batch_pos", values="overall_precision", aggfunc=np.std)
-    matrix = precision_batch_pos_std.iloc[:, 1:].values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    precision_batch_pos_std.iloc[:, 1:] = matrix
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=precision_batch_pos_mean * 100, annot=precision_batch_pos_std.values * 100, fmt=".2f", robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(xticklabels=(["all"] + [str(i) for i in range(1, 11)]))
-    ax.set(ylabel="$k$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_batch_precision_pos.pdf'))
-    # ---
-    recall_batch_pos_mean = df.pivot_table(index="k", columns="batch_pos", values="overall_recall", aggfunc=np.mean)
-    matrix = recall_batch_pos_mean.iloc[:, 1:].values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    recall_batch_pos_mean.iloc[:, 1:] = matrix
-    recall_batch_pos_std = df.pivot_table(index="k", columns="batch_pos", values="overall_recall", aggfunc=np.std)
-    matrix = recall_batch_pos_std.iloc[:, 1:].values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    recall_batch_pos_std.iloc[:, 1:] = matrix
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=recall_batch_pos_mean * 100, annot=recall_batch_pos_std.values * 100, fmt=".2f", robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(xticklabels=(["all"] + [str(i) for i in range(1, 11)]))
-    ax.set(ylabel="$k$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_batch_recall_pos.pdf'))
-    plt.close()
+    ## Batch Precision per alpha_k lineplot
+    batch_precision_summary = df[df["batch_pos"] != 0][["model", "dataset", "overall_precision", "batch_pos"]].groupby(
+        ["model", "dataset", "batch_pos"]).agg(
+        [np.mean, np.std]) * 100
+    batch_precision_summary = batch_precision_summary.reset_index()
+    batch_precision_summary.columns = ["Model", "Dataset", "batch_pos", "precision", "std"]
+
+    ## LinePlot
+    f, ax = plt.subplots(figsize=(7.25, 5.43))
+    sns.lineplot(
+        data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["OntoNotes5.0"])][
+            df["model"].isin(["BERT", "BERT-Relative-Key", "Electra", "ERNIE"])], x="k", y="overall_f1",
+        hue="model", style="dataset", markers=True,
+        dashes=True, err_style="bars", errorbar="sd", palette="colorblind")
+
+    ax.set_xlabel("Subset Position $\alpha_k$")
+    ax.set_ylabel("$F1(\alpha_k)$")
+
 
     ## Consistency ratio (Correct agreement / all agreement)
-    df["consistency"] = df.apply(lambda row: row["overall_correct"] / row["overall_total"], axis=1)
-    consistency_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values="consistency",
-                                                aggfunc=np.mean)
-    matrix = consistency_batch_pos_mean.values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    consistency_batch_pos_mean.iloc[:, :] = matrix
-    consistency_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values="consistency",
-                                               aggfunc=np.std)
-    matrix = consistency_batch_pos_std.values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    consistency_batch_pos_std.iloc[:, :] = matrix
+    df_bert = df[df["model"] == "BERT"]
+    df_bert["consistency"] = df.apply(lambda row: row["overall_correct"] / row["overall_total"], axis=1)
+    correct_agreement = df_bert[df_bert["batch_pos"]==1].pivot_table(index="dataset", columns="batch_comp", values="overall_correct", aggfunc=np.mean)
+    total_decisions = df_bert[df_bert["batch_pos"]==1].pivot_table(index="dataset", columns="batch_comp", values="overall_total", aggfunc=np.mean)
+    for i in range(2, 11):
+        total_decisions[i] = total_decisions[1]
+
+    tp_1 = correct_agreement[1]
+    tp_ratio = correct_agreement.copy()
+    for i in range(1, 11):
+        tp_ratio[i] = tp_ratio[i] / tp_1
+    consistency_mean = correct_agreement / total_decisions
+    benchmarks = {"conll03": "CoNLL03", "ontonotes5": "OntoNotes5.0", "en_ewt": "UD_en", "tweebank": "TweeBank"}
     f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=consistency_batch_pos_mean * 100, annot=consistency_batch_pos_std.values * 100, fmt=".2f",
-                robust=True,
+    sns.heatmap(data=consistency_mean * 100, annot=True, fmt=".2f", cmap="Blues", square=True,
+                robust=True, cbar_kws={"shrink": .5}, linewidths=.5,
                 annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    # locs, labels = plt.xticks()
-    # labels[0] = plt.Text(0.5, 0, "all")
-    # plt.xticks(locs, labels)
-    ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
+
+    labels = [item.get_text() for item in ax.get_yticklabels()]
+    labels_ = [benchmarks[l] for l in labels]
+    ax.set_yticklabels(labels_)
+    ax.set(ylabel=r"", xlabel=r"$k$")
     ax.minorticks_off()
+    ax.tick_params(bottom=False, left=False)
     f.savefig(os.path.join(save_dir, 'heatmap_batch_consistency_pos.pdf'))
     plt.close()
 
-    ## Correct and total agreements consistency
-    correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_correct",
-                                            aggfunc=np.mean)
-    matrix = correct_batch_pos_mean.values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    correct_batch_pos_mean.iloc[:, :] = matrix
-    correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_correct",
-                                           aggfunc=np.std)
-    matrix = correct_batch_pos_std.values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    correct_batch_pos_std.iloc[:, :] = matrix
+    ## Consistency ratio (Correct agreement / correct agreement) lineplot
+    dfss = []
+    cos_mean = tp_ratio.T
+    for col in cos_mean.columns:
+        ss = cos_mean[col]
+        dfs = pd.DataFrame(ss)
+        dfs["k"] = [i for i in range(1, 11)]
+        dfs["dataset"] = col
+        dfs.columns = ["consistency", "k", "dataset"]
+        dfss.append(dfs)
+    cos_batch_k = pd.concat(dfss)
+    cos_batch_k["dataset"] = cos_batch_k["dataset"].map(benchmarks)
     f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values, robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_batch_correct_pos.pdf'))
-
-    total_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_total",
-                                          aggfunc=np.mean)
-    matrix = total_batch_pos_mean.values
-    upper_indices = np.triu_indices(matrix.shape[1])
-    matrix[upper_indices] = matrix.T[upper_indices]
-    total_batch_pos_mean.iloc[:, :] = matrix
-    total_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values="overall_total",
-                                         aggfunc=np.std)
-    matrix = total_batch_pos_std.values
-    matrix[upper_indices] = matrix.T[upper_indices]
-    total_batch_pos_std.iloc[:, :] = matrix
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=total_batch_pos_mean, annot=total_batch_pos_std.values, robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_batch_total_pos.pdf'))
+    sns.lineplot(data=cos_batch_k, x="k", y="consistency", ax=ax, hue="dataset", palette="colorblind", style="dataset",
+                 markers=["o", "o", "o", "o"])
+    sns.move_legend(ax, "upper left", bbox_to_anchor=(0, 0.4), title="Dataset",
+                    fontsize="x-small")
+    ax.set(ylabel=r'$consistency(1,k)$', xlabel=r'$k$')
+    f.savefig(os.path.join(save_dir, 'lines_batch_consistency_pos.pdf'))
     plt.close()
+
 
     # Correct and total agreement per class
     if dataset in ["conll03", "ontonotes"]:
@@ -755,16 +706,16 @@ if __name__ == "__main__":
     #           "gpt2-large"]
     # datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
     # pos_bias = get_results(models, datasets, experiment="position_bias")
-    # pos_bias = pd.read_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
-    # bias_experiment_k_plot(pos_bias, experiment="position_bias")
+    pos_bias = pd.read_csv(os.path.join(plots_dir, "bert_position_bias_eval.csv"))
+    bias_experiment_k_plot(pos_bias, experiment="position_bias")
 
     models = ["bert-base-uncased"]
     datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
     # finetune_shift = get_results(models, datasets, experiment="finetune_shift")
     # finetune_concat = get_results(models, datasets, experiment="finetune_concat")
-    finetune_shift = pd.read_csv(os.path.join(plots_dir, "bert_finetune_shift_eval.csv"))
-    finetune_concat = pd.read_csv(os.path.join(plots_dir, "bert_finetune_concat_eval.csv"))
-    bias_experiment_k_plot(finetune_shift, experiment="finetune_shift")
-    bias_experiment_k_plot(finetune_concat, experiment="finetune_concat")
+    # finetune_shift = pd.read_csv(os.path.join(plots_dir, "bert_finetune_shift_eval.csv"))
+    # finetune_concat = pd.read_csv(os.path.join(plots_dir, "bert_finetune_concat_eval.csv"))
+    # bias_experiment_k_plot(finetune_shift, experiment="finetune_shift")
+    # bias_experiment_k_plot(finetune_concat, experiment="finetune_concat")
 
     # emb_analysis(dataset="conll03")
