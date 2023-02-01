@@ -137,7 +137,7 @@ def dataset_plot():
     df["dataset"] = df["dataset"].map(benchmarks)
     # Histogram
     f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.histplot(data=df[df["seq_lengths"] < 100], x="seq_lengths", hue="dataset", palette="Set2", multiple="dodge",
+    sns.histplot(data=df[df["seq_lengths"] < 100], x="seq_lengths", hue="dataset", palette="colorblind", multiple="dodge",
                  bins=20)
     labels = [item.get_text() for item in ax.get_yticklabels()]
     labels_ = [str(int(int(l) / 1000)) for l in labels]
@@ -401,11 +401,90 @@ def bias_experiment_k_plot(df, experiment="position_bias"):
     overall_f1_summary.to_csv(os.path.join(save_dir, "overall_performance_summary.csv"))
 
     ## Batch Precision per alpha_k lineplot
-    batch_precision_summary = df[df["batch_pos"] != 0][["model", "dataset", "overall_precision", "batch_pos"]].groupby(
-        ["model", "dataset", "batch_pos"]).agg(
-        [np.mean, np.std]) * 100
-    batch_precision_summary = batch_precision_summary.reset_index()
-    batch_precision_summary.columns = ["Model", "Dataset", "batch_pos", "precision", "std"]
+    # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(7.25, 5.43), sharex=True)
+    # sns.lineplot(
+    #     data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["OntoNotes5.0"])][
+    #         df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="k",
+    #     y="overall_precision",
+    #     hue="model", marker='H',
+    #     dashes=True, err_style="band", errorbar="sd", palette="colorblind", ax=ax1,
+    #     err_kws={"linestyle": "--", "alpha": 0.1})
+    # sns.lineplot(
+    #     data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["OntoNotes5.0"])][
+    #         df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="k",
+    #     y="overall_recall",
+    #     hue="model", marker='H',
+    #     dashes=True, err_style="band", errorbar="sd", palette="colorblind", ax=ax2,
+    #     err_kws={"linestyle": "--", "alpha": 0.1})
+    # sns.lineplot(data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["UD_en"])][
+    #     df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="k",
+    #              y="overall_precision",
+    #              hue="model", marker='o',
+    #              dashes=True, err_style="band", errorbar="sd", palette="colorblind", ax=ax3,
+    #              err_kws={"linestyle": "--", "alpha": 0.1})
+    # sns.lineplot(data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["UD_en"])][
+    #     df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="k",
+    #              y="overall_recall",
+    #              hue="model", marker='o',
+    #              dashes=True, err_style="band", errorbar="sd", palette="colorblind", ax=ax4,
+    #              err_kws={"linestyle": "--", "alpha": 0.1})
+    #
+    # ax1.get_legend().remove()
+    # ax4.get_legend().remove()
+    # ax3.get_legend().remove()
+    # ax1.set(ylabel=r"$Prec.(\alpha_k)$", xlabel="", title="(a)")
+    # ax2.set(ylabel=r"$Rec.(\alpha_k)$", xlabel="", title="(b)")
+    # ax3.set(ylabel=r"$Prec.(\alpha_k)$", xlabel=r"$\alpha_k$", title="(c)")
+    # ax4.set(ylabel=r"$Rec(\alpha_k)$", xlabel=r"$\alpha_k$", title="(d)")
+    # ax4.set(yticklabels=[])
+    # ax2.set(yticklabels=[])
+    # sns.move_legend(ax2, "upper left", bbox_to_anchor=(1, 0.4),
+    #                 fontsize="small")
+    # f.savefig(os.path.join(save_dir, 'recall_precision_batch_pos.pdf'))
+
+    # Pos bias overall Prec and Recall
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(7.25, 5.43), sharex=True)
+    sns.lineplot(
+        data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["OntoNotes5.0"])][
+            df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])],
+        x="batch_pos",
+        y="overall_precision",
+        hue="model", style="model", markers=["P", 'H', '^', "s", '>'],
+        err_style="band", errorbar="sd", palette="colorblind", ax=ax1,
+        err_kws={"linestyle": "--", "alpha": 0.1})
+    sns.lineplot(
+        data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["OntoNotes5.0"])][
+            df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])],
+        x="batch_pos",
+        y="overall_recall",
+        hue="model", style="model", markers=["P", 'H', '^', "s", '>'], err_style="band", errorbar="sd",
+        palette="colorblind", ax=ax2,
+        err_kws={"linestyle": "--", "alpha": 0.1})
+    sns.lineplot(data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["UD_en"])][
+        df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="batch_pos",
+                 y="overall_precision",
+                 hue="model", style="model", markers=["P", 'H', '^', "s", '>'], err_style="band", errorbar="sd",
+                 palette="colorblind", ax=ax3,
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    sns.lineplot(data=df[df["batch_pos"] == df["batch_comp"]][df["batch_pos"] != 0][df["dataset"].isin(["UD_en"])][
+        df["model"].isin(["BERT", "BERT-Relative-Key", "BERT-Relative-Key-Query", "ERNIE", "Electra"])], x="batch_pos",
+                 y="overall_recall",
+                 hue="model", style="model", markers=["P", 'H', '^', "s", '>'], err_style="band", errorbar="sd",
+                 palette="colorblind", ax=ax4,
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+
+    ax1.get_legend().remove()
+    ax4.get_legend().remove()
+    ax3.get_legend().remove()
+    ax1.set(ylabel=r"$Prec.(\alpha_k)$", xlabel="", title="(a.OntoNotes5.0)")
+    ax2.set(ylabel=r"$Rec.(\alpha_k)$", xlabel="", title="(b.OntoNotes5.0)")
+    ax3.set(ylabel=r"$Prec.(\alpha_k)$", xlabel=r"$\alpha_k$", title="(c.UD_en)")
+    ax4.set(ylabel=r"$Rec(\alpha_k)$", xlabel=r"$\alpha_k$", title="(d.UD_en)")
+    ax4.set(yticklabels=[])
+    ax2.set(yticklabels=[])
+    sns.move_legend(ax2, "upper left", bbox_to_anchor=(1, 0.4),
+                    fontsize="small")
+    f.savefig(os.path.join(save_dir, 'recall_precision_batch_pos.pdf'))
 
     ## LinePlot
     f, ax = plt.subplots(figsize=(7.25, 5.43))
@@ -417,9 +496,9 @@ def bias_experiment_k_plot(df, experiment="position_bias"):
 
     ax.set_xlabel("Subset Position $\alpha_k$")
     ax.set_ylabel("$F1(\alpha_k)$")
+    f.savefig(os.path.join(save_dir, 'f1_batch_pos.pdf'))
 
-
-    ## Consistency ratio (Correct agreement / all agreement)
+    # Consistency ratio (Correct agreement / all agreement)
     df_bert = df[df["model"] == "BERT"]
     df_bert["consistency"] = df.apply(lambda row: row["overall_correct"] / row["overall_total"], axis=1)
     correct_agreement = df_bert[df_bert["batch_pos"]==1].pivot_table(index="dataset", columns="batch_comp", values="overall_correct", aggfunc=np.mean)
@@ -469,148 +548,207 @@ def bias_experiment_k_plot(df, experiment="position_bias"):
     plt.close()
 
 
-    # Correct and total agreement per class
-    if dataset in ["conll03", "ontonotes"]:
-        labels = NERDatasetbuilder.get_labels(dataset=dataset)
-    else:
-        labels = POSDatasetbuilder.get_labels(dataset=dataset)
-    labels = list(np.unique([l.split("-")[-1] for l in labels]))
-    labels.remove("O")
-    for cls in labels:
-        correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.correct",
-                                                aggfunc=np.mean)
-        matrix = correct_batch_pos_mean.values
-        upper_indices = np.triu_indices(matrix.shape[1])
-        matrix[upper_indices] = matrix.T[upper_indices]
-        correct_batch_pos_mean.iloc[:, :] = matrix
-        correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.correct",
-                                               aggfunc=np.std)
-        matrix = correct_batch_pos_std.values
-        matrix[upper_indices] = matrix.T[upper_indices]
-        correct_batch_pos_std.iloc[:, :] = matrix
-        f, ax = plt.subplots(figsize=(5, 3.75))
-        sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values, robust=True,
-                    annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-        # locs, labels = plt.xticks()
-        # labels[0] = plt.Text(0.5, 0, "all")
-        # plt.xticks(locs, labels)
-        ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-        f.savefig(os.path.join(save_dir, f'{cls}_heatmap_correct_pos.pdf'))
-        plt.close()
+    # Precision and recall per class
+    f, axes = plt.subplots(5, 2, figsize=(7.25, 9), sharex=True)
 
-        correct_batch_pos_mean = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.total",
-                                                aggfunc=np.mean)
-        matrix = correct_batch_pos_mean.values
-        upper_indices = np.triu_indices(matrix.shape[1])
-        matrix[upper_indices] = matrix.T[upper_indices]
-        correct_batch_pos_mean.iloc[:, :] = matrix
-        correct_batch_pos_std = df.pivot_table(index="batch_comp", columns="batch_pos", values=f"{cls}.total",
-                                               aggfunc=np.std)
-        matrix = correct_batch_pos_std.values
-        matrix[upper_indices] = matrix.T[upper_indices]
-        correct_batch_pos_std.iloc[:, :] = matrix
-        f, ax = plt.subplots(figsize=(5, 3.75))
-        sns.heatmap(data=correct_batch_pos_mean, annot=correct_batch_pos_std.values, robust=True,
-                    annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-        # locs, labels = plt.xticks()
-        # labels[0] = plt.Text(0.5, 0, "all")
-        # plt.xticks(locs, labels)
-        ax.set(ylabel=r"$Test_{subset}(\alpha_{[1,k]})$", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-        f.savefig(os.path.join(save_dir, f'{cls}_heatmap_correct_pos.pdf'))
-        plt.close()
+    ##### CoNll03
+    data_df = df[df["dataset"] == "CoNLL03"]
+    ## PER and MISC
+    per_number = int(data_df[data_df["batch_pos"] != 0][f"PER.number"].unique()[0])
+    at = AnchoredText(
+        f"Support: {per_number}", prop=dict(size=8), frameon=True, loc='lower left')
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    # Per position
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"PER.precision", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[0, 0],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(a).CoNLL03: PER",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(0.5, 1.),
+                       bbox_transform=axes[0, 0].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[0, 0].add_artist(tag)
+    axes[0, 0].set(ylabel=r"$Prec(\alpha)$")
+    axes[0, 0].get_legend().remove()
 
-    # Line Plots
-    ## F1 performance of all classes per batch position
-    for cls in labels:
-        batch_number = df[df["batch_pos"] != 0][f"{cls}.number"].unique()[0]
-        at = AnchoredText(
-            f"Support: {batch_number}", prop=dict(size=15), frameon=True, loc='upper right')
-        at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
-        # Per position
-        f, ax = plt.subplots(figsize=(3.54, 2.65))
-        sns.pointplot(data=df[df["batch_pos"] != 0], x="batch_pos", y=f"{cls}.f1", errorbar="sd", markers="x",
-                      errwidth=1, scale=0.5, palette="Paired", hue="k", linestyles="--")
-        # Tweak the visual presentation
-        sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), title=r"$k$", fontsize="xx-small")
-        ax.add_artist(at)
-        ax.set(ylabel=f"F1({cls})", xlabel='Batch(k) Position')
-        # Per k factor
-        f.savefig(os.path.join(save_dir, f'{cls}_f1_pos.pdf'))
-        f, ax = plt.subplots(figsize=(3.54, 2.65))
-        at = AnchoredText(
-            f"Support: {batch_number}", prop=dict(size=15), frameon=True, loc='upper right')
-        at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
-        sns.pointplot(data=df[df["batch_pos"] != 0], x="k", y=f"{cls}.f1", errorbar="sd", markers="x",
-                      errwidth=1, scale=0.5, palette="Paired", hue="batch_pos", linestyles="--")
-        # Tweak the visual presentation
-        sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), title=r"$Test_{subset}(\alpha_{[1,k]})$",
-                        fontsize="xx-small")
-        ax.set(ylabel=f"F1({cls})", xlabel=r'$k$')
-        ax.add_artist(at)
-        f.savefig(os.path.join(save_dir, f'{cls}_f1_k.pdf'))
-    plt.close()
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"PER.recall", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[0, 1],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(b).CoNLL03: PER",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(0.5, 1.),
+                       bbox_transform=axes[0, 1].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[0, 1].add_artist(tag)
+    axes[0, 1].get_legend().remove()
+    axes[0, 1].add_artist(at)
+    axes[0, 1].set(ylabel=r"$Rec(\alpha)$")
+    axes[0, 1].set(yticklabels=[])
 
-    ## F1 performance of all classes per k across all positions
-    class_dfs = []
-    for cls in labels:
-        cls_df = df.loc[:,
-                 [key for key in df.keys() if key.startswith(f"{cls}.")] + ["k", "run", "batch_pos",
-                                                                            "batch_comp"]]
-        cols = [col.split(".")[-1] if col.startswith(f"{cls}.") else col for col in cls_df.columns]
-        cls_df.columns = cols
-        cls_df["class"] = cls
-        class_dfs.append(cls_df)
-    class_df = pd.concat(class_dfs, ignore_index=True)
-    overall_class_perf = class_df[class_df["batch_pos"] == 0]
-    f, ax = plt.subplots(figsize=(3.54, 2.65))
-    sns.lineplot(data=overall_class_perf, x="k", y="f1", errorbar="sd", hue="class", ax=ax)
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1), title="Class",
-                    fontsize="xx-small")
-    ax.set(ylabel=f"F1", xlabel=r'$k$')
-    f.savefig(os.path.join(save_dir, f'allclasses_f1_k.pdf'))
-    plt.close()
+    misc_number = int(data_df[data_df["batch_pos"] != 0][f"MISC.number"].unique()[0])
+    at = AnchoredText(
+        f"Support: {misc_number}", prop=dict(size=8), frameon=True, loc='upper right')
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"MISC.precision", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[1, 0],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(c).CoNLL03: MISC",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[1, 0].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[1, 0].add_artist(tag)
+    axes[1, 0].set(ylabel=r"$Prec(\alpha)$")
+    axes[1, 0].get_legend().remove()
 
-    ## F1 per class/k
-    for cls in labels:
-        batch_number = overall_class_perf[overall_class_perf["class"] == cls][f"number"].unique()
-        legend = "\n".join([f"k={i}: {n}" for i, n in enumerate(batch_number)])
-        f, ax = plt.subplots(figsize=(3.54, 2.65))
-        sns.lineplot(data=overall_class_perf[overall_class_perf["class"] == cls], x="k", y=f"f1", errorbar="sd",
-                     )
-        ax.set(ylabel=f"F1({cls})", xlabel=r'$k$')
-        at = AnchoredText(
-            f"Support\n{legend}", prop=dict(size=6), frameon=True, loc='upper right', bbox_to_anchor=(1, 1),
-            bbox_transform=ax.transAxes)
-        at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
-        ax.add_artist(at)
-        f.savefig(os.path.join(save_dir, f'{cls}_f1_k_nopos.pdf'))
-    plt.close()
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"MISC.recall", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[1, 1],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(d).CoNLL03: MISC",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[1, 1].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[1, 1].add_artist(tag)
+    axes[1, 1].get_legend().remove()
+    axes[1, 1].add_artist(at)
+    axes[1, 1].set(ylabel=r"$Rec(\alpha)$")
+    axes[1, 1].set(yticklabels=[])
 
-    # HeatMap of classes performance / batch position
-    class_batch_pos_mean = class_df.pivot_table(index="class", columns="batch_pos", values="f1", aggfunc=np.mean)
-    class_batch_pos_std = class_df.pivot_table(index="class", columns="batch_pos", values="f1", aggfunc=np.std)
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=class_batch_pos_std * 100, annot=class_batch_pos_mean.values * 100, fmt=".2f", robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    ax.set(xticklabels=(["all"] + [str(i) for i in range(1, 11)]))
-    ax.set(ylabel="Class", xlabel=r"$Test_{subset}(\alpha_{[1,k]})$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_class_f1_pos.pdf'))
-    # Heatmap of classes / k
-    class_batch_pos_mean = class_df[class_df["batch_pos"] == 0].pivot_table(index="class", columns="k", values="f1",
-                                                                            aggfunc=np.mean)
-    class_batch_pos_std = class_df[class_df["batch_pos"] == 0].pivot_table(index="class", columns="k", values="f1",
-                                                                           aggfunc=np.std)
-    f, ax = plt.subplots(figsize=(5, 3.75))
-    sns.heatmap(data=class_batch_pos_std * 100, annot=class_batch_pos_mean.values * 100, fmt=".2f", robust=True,
-                annot_kws={"fontsize": 'xx-small', "fontstretch": 'extra-condensed'}, ax=ax)
-    # ax.set(xticklabels=(["all"] + [str(i) for i in range(1, 11)]))
-    ax.set(ylabel="Class", xlabel=r"$k$")
-    ax.xaxis.tick_top()
-    ax.minorticks_off()
-    f.savefig(os.path.join(save_dir, 'heatmap_class_f1_k.pdf'))
-    plt.close()
+    ##### Ontonotes
+    data_df = df[df["dataset"] == "OntoNotes5.0"]
+    ## PERSON  and WORK_OF_ART
+    per_number = int(data_df[data_df["batch_pos"] != 0][f"PERSON.number"].unique()[0])
+    at = AnchoredText(
+        f"Support: {per_number}", prop=dict(size=8), frameon=True, loc='lower left')
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    # Per position
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"PERSON.precision", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[2, 0],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(e).OntoNotes5.0: PERSON",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[2, 0].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[2, 0].add_artist(tag)
+    axes[2, 0].set(ylabel=r"$Prec(\alpha)$")
+    axes[2, 0].get_legend().remove()
+
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"PERSON.recall", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[2, 1],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(f).OntoNotes5.0: PERSON",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[2, 1].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[2, 1].add_artist(tag)
+    sns.move_legend(axes[2, 1], "upper left", bbox_to_anchor=(1, 1), title="",
+                    fontsize="small")
+    axes[2, 1].add_artist(at)
+    axes[2, 1].set(ylabel=r"$Rec(\alpha)$")
+    axes[2, 1].set(yticklabels=[])
+
+    woa_number = int(data_df[data_df["batch_pos"] != 0][f"WORK_OF_ART.number"].unique()[0])
+    at = AnchoredText(
+        f"Support: {woa_number}", prop=dict(size=8), frameon=True, loc='lower left')
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"WORK_OF_ART.precision", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[3, 0],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(g).OntoNotes5.0: WORK_OF_ART",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[3, 0].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[3, 0].add_artist(tag)
+    axes[3, 0].set(ylabel=r"$Prec(\alpha)$")
+    axes[3, 0].get_legend().remove()
+
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"WORK_OF_ART.recall", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[3, 1],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(h).OntoNotes5.0: WORK_OF_ART",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[3, 1].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[3, 1].add_artist(tag)
+    axes[3, 1].get_legend().remove()
+    axes[3, 1].add_artist(at)
+    axes[3, 1].set(ylabel=r"$Rec(\alpha)$")
+    axes[3, 1].set(yticklabels=[])
+
+    #### TweeBank
+    data_df = df[df["dataset"] == "TweeBank"]
+    ## NOUN
+    noun_number = int(data_df[data_df["batch_pos"] != 0][f"NOUN.number"].unique()[0])
+    at = AnchoredText(
+        f"Support: {noun_number}", prop=dict(size=8), frameon=True, loc='lower left')
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    # Per position
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"NOUN.precision", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[4, 0],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(i).TweeBank: NOUN",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[4, 0].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[4, 0].add_artist(tag)
+    axes[4, 0].set(ylabel=r"$Prec(\alpha)$", xlabel=r"$\alpha$")
+    axes[4, 0].get_legend().remove()
+
+    sns.lineplot(data=data_df[data_df["batch_pos"] != 0], x="batch_pos", y=f"NOUN.recall", errorbar="sd",
+                 markers=['*', 'H', '^'],
+                 palette="colorblind", hue="model", style="model", ax=axes[4, 1],
+                 err_kws={"linestyle": "--", "alpha": 0.1})
+    # Tweak the visual presentation
+    tag = AnchoredText("(j).TweeBank: NOUN",
+                       loc='lower center', prop=dict(size=8), frameon=True,
+                       bbox_to_anchor=(.5, 1.),
+                       bbox_transform=axes[4, 1].transAxes
+                       )
+    tag.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    axes[4, 1].add_artist(tag)
+    axes[4, 1].get_legend().remove()
+    axes[4, 1].add_artist(at)
+    axes[4, 1].set(ylabel=r"$Rec(\alpha)$", xlabel=r"$\alpha$")
+    axes[4, 1].set(yticklabels=[])
+    f.tight_layout()
+    f.savefig(os.path.join(save_dir, 'class_perf_batch_pos.pdf'))
+
+
+
+
 
 
 def emb_analysis(dataset="conll03"):
@@ -713,9 +851,12 @@ if __name__ == "__main__":
     datasets = ["conll03", "ontonotes5", "en_ewt", "tweebank"]
     # finetune_shift = get_results(models, datasets, experiment="finetune_shift")
     # finetune_concat = get_results(models, datasets, experiment="finetune_concat")
-    # finetune_shift = pd.read_csv(os.path.join(plots_dir, "bert_finetune_shift_eval.csv"))
-    # finetune_concat = pd.read_csv(os.path.join(plots_dir, "bert_finetune_concat_eval.csv"))
-    # bias_experiment_k_plot(finetune_shift, experiment="finetune_shift")
-    # bias_experiment_k_plot(finetune_concat, experiment="finetune_concat")
+    finetune_shift = pd.read_csv(os.path.join(plots_dir, "bert_finetune_shift_eval.csv"))
+    finetune_concat = pd.read_csv(os.path.join(plots_dir, "bert_finetune_concat_eval.csv"))
+    df_bert = pos_bias[pos_bias["model"] == "BERT"]
+    finetune_shift["model"] = "BERT-RPP"
+    finetune_concat["model"] = "BERT-CP"
+    df = pd.concat([df_bert, finetune_shift, finetune_concat])
+    bias_experiment_k_plot(df, experiment="finetune")
 
     # emb_analysis(dataset="conll03")

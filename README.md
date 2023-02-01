@@ -1,6 +1,6 @@
 # P-22-NER-Position-Bias
 
-This repository contains code for [Impact of Positional Bias in Data-imbalanced NER Downstream Task]().
+This repository contains code for [Impact of Positional Bias on Language Models in Token Classification]().
 
 ## Requirements
 
@@ -21,23 +21,24 @@ The environment used can reproduced by using `p-22-ner-position-bias.yml`
 conda env create -f p-22-ner-position-bias.yml
 ```
 
-## Bert Positional Bias in Named Entity Recognition
-In this repository, we analyze BERT performance on two datasets [conll03](https://www.clips.uantwerpen.be/conll2003/ner/) and [Ontonotesv5](https://catalog.ldc.upenn.edu/LDC2013T19). Processed files for both datasets can be downloaded from this link [https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing](https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing).
+## Bert Positional Bias in Named Entity Recognition and Part of Speech taggin
+In this repository, we analyze BERT and other performance on two datasets [conll03](https://www.clips.uantwerpen.be/conll2003/ner/) and [Ontonotesv5](https://catalog.ldc.upenn.edu/LDC2013T19) for NER and [UD English Web TreeBank](https://github.com/UniversalDependencies/UD_English-EWT) and [TweeBank](https://github.com/Oneplus/Tweebank). Processed files for both datasets can be downloaded from this link [https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing](https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing).
 
 ### Experiments:
+Under the folder `experiments/scripts`,
+#### 1. Position Bias Analysis
 
-#### 1. Bert Bias analysis with different Sequences lengths
+- Encoder Models: BERT, ERNIE, ELECTRA
 
-For `max`:
-- Run `experiments/bert_position_bias_ner.sh $dataset max`
-
-For `median`:
-- Run `experiments/bert_position_bias_ner.sh $dataset median`
+        ./run_all_evaluations.sh
  
+- Decoder Models: GPT2 and BLOOM
 
-#### 2. Fine-tuning with shuffling (validation), random padding,
+        ./run_all_evaluations_decoders.sh
 
+#### 2. Fine-tuning with Random Position Perturbation, Context Perturbation
 
+        ./run_all_finetuning.sh
 
 ### Results
-The training loss and evaluation results on the dev set are synced to the wandb dashboard.
+All evaluation results and log files are synced to the Weights and Biases and will be published.
