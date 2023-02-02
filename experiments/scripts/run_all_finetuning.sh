@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # List of Datasets
-DATASETS=("ontonotes5")
+DATASETS=("conll03" "ontonotes5" "en_ewt" "tweebank")
 # List of Models
 MODEL=bert-base-uncased
 # List of methods

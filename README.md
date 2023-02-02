@@ -22,7 +22,7 @@ conda env create -f p-22-ner-position-bias.yml
 ```
 
 ## Bert Positional Bias in Named Entity Recognition and Part of Speech taggin
-In this repository, we analyze BERT and other performance on two datasets [conll03](https://www.clips.uantwerpen.be/conll2003/ner/) and [Ontonotesv5](https://catalog.ldc.upenn.edu/LDC2013T19) for NER and [UD English Web TreeBank](https://github.com/UniversalDependencies/UD_English-EWT) and [TweeBank](https://github.com/Oneplus/Tweebank). Processed files for both datasets can be downloaded from this link [https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing](https://drive.google.com/file/d/1HjYCQyt1-LMzVq5pccv52vfWz04cpmUj/view?usp=sharing).
+In this repository, we analyze BERT and other performance on two datasets [conll03](https://www.clips.uantwerpen.be/conll2003/ner/) and [Ontonotesv5](https://catalog.ldc.upenn.edu/LDC2013T19) for NER and [UD English Web TreeBank](https://github.com/UniversalDependencies/UD_English-EWT) and [TweeBank](https://github.com/Oneplus/Tweebank).
 
 ### Experiments:
 Under the folder `experiments/scripts`,
