@@ -83,7 +83,7 @@ def get_parser(HF=True) -> argparse.ArgumentParser:
                              'on "relative_key", please refer to Self-Attention with Relative Position Representations'
                              '(Shaw et al.). For more information on "relative_key_query", please refer to Method 4 in '
                              'Improve Transformer Models with Better Relative Position Embeddings (Huang et al.).',
-                        choices=["absolute", "relative_key", "relative_key_query"])
+                        choices=["absolute", "relative_key", "relative_key_query", "none"])
     parser.add_argument("--debugging", action="store_true", help="whether it's debugging")
 
     return parser

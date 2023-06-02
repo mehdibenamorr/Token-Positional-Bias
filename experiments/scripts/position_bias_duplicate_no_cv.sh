@@ -16,11 +16,12 @@ PADDING=max_length
 PADDING_SIDE=right
 
 #Script ARGS
-EXPERIMENT=position_bias
+EXPERIMENT=position_bias_no_ids
 MODEL=$2
 DATASET=$1
 NBRUNS=5
 MODE=sep
+POSITION_EMBEDDING_TYPE=$3
 
 OUTPUT_DIR=/data/.position_bias
 
@@ -49,4 +50,5 @@ python ${REPO}/experiments/position_bias.py \
   --include_inputs_for_metrics \
   --duplicate \
   --truncation \
-  --duplicate_mode ${MODE}
+  --duplicate_mode ${MODE} \
+  --position_embedding_type ${POSITION_EMBEDDING_TYPE}

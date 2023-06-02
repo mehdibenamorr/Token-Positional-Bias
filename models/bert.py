@@ -7,11 +7,11 @@ from typing import Optional, Union, Tuple, List
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
-from transformers import BertPreTrainedModel, BertModel, apply_chunking_to_forward
+from transformers import apply_chunking_to_forward
 from transformers.modeling_outputs import TokenClassifierOutput, BaseModelOutputWithPoolingAndCrossAttentions
 
 from metrics.cosine_similartiy import cosine_similarity
-
+from models.modeling_bert import BertPreTrainedModel, BertModel
 
 """
 zhiheng-huang/bert-base-uncased-embedding-relative-key-query

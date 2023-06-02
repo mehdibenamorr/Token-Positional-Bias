@@ -73,7 +73,7 @@ class TokenClassificationTrainer(Trainer):
         config_cls = config_mapping[self.model_path]
         model_config = config_cls.from_pretrained(self.model_path,
                                                   id2label=self.dataset.id2label,
-                                                  label2id=self.dataset.label2id)
+                                                  label2id=self.dataset.label2id,position_embedding_type=self.all_args.position_embedding_type)
         print(f"DEBUG INFO -> check bert_config \n {model_config}")
         if self.model_path in model_mapping:
             model_cls = model_mapping[self.model_path]
