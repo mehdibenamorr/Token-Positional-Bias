@@ -21,7 +21,7 @@ MODEL=$2
 DATASET=$1
 NBRUNS=5
 MODE=sep
-POSITION_EMBEDDING_TYPE=$3
+#POSITION_EMBEDDING_TYPE=$3
 
 OUTPUT_DIR=/data/.position_bias
 
@@ -51,4 +51,4 @@ python ${REPO}/experiments/position_bias.py \
   --duplicate \
   --truncation \
   --duplicate_mode ${MODE} \
-  --position_embedding_type ${POSITION_EMBEDDING_TYPE}
+#  --position_embedding_type ${POSITION_EMBEDDING_TYPE}

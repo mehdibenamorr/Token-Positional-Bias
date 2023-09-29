@@ -27,4 +27,5 @@ config_mapping = {"bert-base-uncased": BertConfigForTokenClassification,
                   "bigscience/bloom-560m": AutoConfig,
                   "gpt2-large": AutoConfig,
                   "gpt2": AutoConfig,
+                  "junnyu/roformer_chinese_base": AutoConfig,
                   }

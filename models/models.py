@@ -12,4 +12,5 @@ model_mapping = {"bert-base-uncased": BertForTokenClassification,
                  "bigscience/bloom-560m": AutoModelForTokenClassification,
                  "gpt2-large": AutoModelForTokenClassification,
                  "gpt2": AutoModelForTokenClassification,
+                 "junnyu/roformer_chinese_base": AutoModelForTokenClassification,
                  }
